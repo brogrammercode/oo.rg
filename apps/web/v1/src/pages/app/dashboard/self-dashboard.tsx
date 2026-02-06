@@ -1,246 +1,377 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import {
-    Edit,
+    Clock,
+    Timer,
+    TimerOff,
     Trophy,
     AlertTriangle,
     DollarSign,
     Scale,
     Play,
-    ArrowRight,
-    LogIn,
-    LogOut,
-    Clock,
-    CalendarDays
+    CalendarDays,
+    Plus
 } from 'lucide-react';
-
-const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-[#202020] rounded-xl border border-gray-200 dark:border-[#333333] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] ${className}`}>
-        {children}
-    </div>
-);
-
-const DonutChart = () => (
-    <div className="relative w-32 h-32">
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-            <path className="text-gray-100 dark:text-gray-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3.8"></path>
-            <path className="text-purple-600" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="90, 100" strokeWidth="3.8"></path>
-            <path className="text-emerald-500" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="60, 100" strokeDashoffset="-20" strokeWidth="3.8"></path>
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 bg-white dark:bg-[#202020] rounded-full"></div>
-        </div>
-    </div>
-);
-
-const StatBadge = ({ color, count, label }: { color: string; count: number; label: string }) => (
-    <div className="flex items-center gap-2">
-        <span className={`w-2.5 h-2.5 rounded-full ${color}`}></span>
-        <span className="text-gray-900 dark:text-white font-medium">{count}</span>
-        <span className="text-gray-500 dark:text-gray-400 text-xs">{label}</span>
-    </div>
-);
-
-const StatCard = ({ icon: Icon, value, label, colorClass, textClass }: { icon: any; value: string; label: string; colorClass: string; textClass: string }) => (
-    <Card className="p-4 flex items-center gap-4">
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${colorClass} ${textClass}`}>
-            <Icon size={20} />
-        </div>
-        <div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">{value}</h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-        </div>
-    </Card>
-);
-
-const ProgressBar = ({ label, value, color, iconColor }: { label: string; value: string; color: string; iconColor: string }) => (
-    <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${iconColor}`}></span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-        </div>
-        <p className="text-xl font-bold text-gray-900 dark:text-white ml-4">{value}</p>
-        <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full ml-4 overflow-hidden">
-            <div className={`h-full ${color} w-0`}></div>
-        </div>
-    </div>
-);
+import { StatCard, InfoCard, ActionButton, InfoItem } from './dashboard-components';
+import Avatar from '../../../components/ui/avatar';
+import { useOrgStore } from '../../../stores/org';
+import attendanceService from '../../../services/attendance/attendance.service';
+import leaveService from '../../../services/leave/leave.service';
+import { AttendanceStatus } from '../../../constants/attendance';
+import { getLocalDateString, getLocalDateTimeString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
+import { isPositiveStatus, LeaveFormModal } from '../leave/leave-components';
+import { LeaveStatus } from '../../../constants/leave';
+import type { Attendance } from '../../../types/attendance';
+import type { Leave, LeaveType } from '../../../types/leave';
 
 export default function SelfDashboard() {
+    const { org, employee } = useOrgStore();
+    // const navigate = useNavigate();
+    const [attendance, setAttendance] = useState<Attendance[]>([]);
+    const [leaves, setLeaves] = useState<Leave[]>([]);
+    const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+    const [_, setLoading] = useState(true);
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const [leaveFormOpen, setLeaveFormOpen] = useState(false);
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [org, employee]);
+
+    const fetchData = async () => {
+        if (!org || !employee) return;
+        try {
+            const [attendanceRes, leavesRes, leaveTypesRes] = await Promise.all([
+                attendanceService.getAttendance(employee._id),
+                leaveService.getMyLeaves(employee._id),
+                leaveService.getAllLeaveType(org._id)
+            ]);
+
+            const attendanceData = attendanceRes.data.data.attendance;
+            setAttendance(Array.isArray(attendanceData) ? attendanceData : [attendanceData]);
+
+            const leaveData = leavesRes.data.data.leave;
+            setLeaves(Array.isArray(leaveData) ? leaveData : [leaveData]);
+
+            setLeaveTypes(leaveTypesRes.data.data.leaveTypes || []);
+            setLoading(false);
+        } catch (error) {
+            console.error(error);
+            setLoading(false);
+        }
+    };
+
+    const handleClockIn = async () => {
+        if (!org || !employee) return;
+        try {
+            await attendanceService.createAttendance(org._id, employee._id, {
+                date: getLocalDateString(),
+                status: AttendanceStatus.PRESENT,
+                checkIn: getLocalDateTimeString(),
+                checkOut: ''
+            });
+            fetchData();
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleClockOut = async () => {
+        if (!employee) return;
+        try {
+            const today = getLocalDateString();
+            const todayAtt = attendance.find(att => {
+                const attDate = att.date ? toLocalDateString(att.date) : '';
+                return attDate === today;
+            });
+
+            if (todayAtt) {
+                await attendanceService.updateAttendance(todayAtt._id, {
+                    date: todayAtt.date ? toLocalDateString(todayAtt.date) : '',
+                    status: todayAtt.status || AttendanceStatus.PRESENT,
+                    checkIn: todayAtt.checkIn ? toLocalDateTimeString(todayAtt.checkIn) : '',
+                    checkOut: getLocalDateTimeString()
+                });
+                fetchData();
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const getTodayAttendance = (): Attendance | null => {
+        const today = getLocalDateString();
+        return attendance.find(att => {
+            const attDate = att.date ? toLocalDateString(att.date) : '';
+            return attDate === today;
+        }) || null;
+    };
+
+    const getAttendanceStats = () => {
+        const present = attendance.filter(att =>
+            att.status === AttendanceStatus.PRESENT ||
+            att.status === AttendanceStatus.LATE ||
+            att.status === AttendanceStatus.OVERTIME
+        ).length;
+        const late = attendance.filter(att => att.status === AttendanceStatus.LATE).length;
+        const halfDay = attendance.filter(att => att.status === AttendanceStatus.LATE).length;
+
+        return {
+            total: attendance.length,
+            present,
+            leaves: leaves.filter(l => isPositiveStatus(l.status)).length,
+            halfDay,
+            late,
+            overtime: 0
+        };
+    };
+
+    const getLeaveStats = () => {
+        const approved = leaves.filter(l => isPositiveStatus(l.status)).length;
+        const rejected = leaves.filter(l => l.status === LeaveStatus.REJECTED).length;
+        const pending = leaves.filter(l => l.status === LeaveStatus.PENDING).length;
+        const paid = leaves.filter(l => l.type?.isPaid && isPositiveStatus(l.status)).length;
+        const unpaid = leaves.filter(l => !l.type?.isPaid && isPositiveStatus(l.status)).length;
+
+        return {
+            total: leaves.length,
+            approved,
+            rejected,
+            pending,
+            paid,
+            unpaid
+        };
+    };
+
+    const attendanceStats = getAttendanceStats();
+    const leaveStats = getLeaveStats();
+    const todayAtt = getTodayAttendance();
+
     return (
-        <>
-            <div className="flex flex-col gap-6">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-1 overflow-hidden p-0">
-                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 dark:from-black dark:to-gray-800 p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center text-white font-bold text-xl border-2 border-white/20">
-                                    DH
-                                </div>
-                                <div>
-                                    <h2 className="text-white font-semibold">Department Head</h2>
-                                    <p className="text-gray-300 text-xs flex items-center gap-1">
-                                        Legal Advisor <span className="w-1 h-1 rounded-full bg-gray-400"></span> Customer Support
-                                    </p>
-                                </div>
-                            </div>
-                            <button className="text-gray-400 hover:text-white transition-colors">
-                                <Edit size={16} />
-                            </button>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            <div>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Phone Number</p>
-                                <p className="text-sm text-gray-900 dark:text-white">-</p>
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Email</p>
-                                <p className="text-sm text-gray-900 dark:text-white">department@example.com</p>
-                            </div>
-                            <div>
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Address</p>
-                                <p className="text-sm text-gray-900 dark:text-white">-</p>
-                            </div>
-                            <div className="pt-2 border-t border-gray-200 dark:border-[#333333]">
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Joining Date</p>
-                                <p className="text-sm text-gray-900 dark:text-white font-medium">2022-03-20</p>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card className="lg:col-span-1 p-5 flex flex-col">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Attendance Details</h3>
-                        </div>
-                        <div className="flex-1 flex items-center justify-between">
-                            <div className="space-y-3 text-sm w-1/2">
-                                <StatBadge color="bg-purple-600" count={121} label="Total" />
-                                <StatBadge color="bg-emerald-500" count={115} label="Present" />
-                                <StatBadge color="bg-red-500" count={6} label="Leaves" />
-                                <StatBadge color="bg-blue-500" count={0} label="Half Day" />
-                                <StatBadge color="bg-orange-500" count={33} label="Late" />
-                            </div>
-                            <DonutChart />
-                        </div>
-                    </Card>
-
-                    <Card className="lg:col-span-1 p-5 flex flex-col">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Leave Details</h3>
-                        </div>
-                        <div className="flex-1 grid grid-cols-2 gap-y-4 gap-x-2">
-                            {[
-                                { label: 'Total Leaves', value: '9', color: 'text-gray-900 dark:text-white' },
-                                { label: 'Approved', value: '6', color: 'text-emerald-600 dark:text-emerald-400' },
-                                { label: 'Rejected', value: '0', color: 'text-red-600 dark:text-red-400' },
-                                { label: 'Pending', value: '3', color: 'text-orange-600 dark:text-orange-400' },
-                                { label: 'Paid Leaves', value: '0', color: 'text-gray-900 dark:text-white' },
-                                { label: 'Unpaid Leaves', value: '9', color: 'text-gray-900 dark:text-white' },
-                            ].map((item, index) => (
-                                <div key={index}>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{item.label}</p>
-                                    <p className={`text-lg font-semibold ${item.color}`}>{item.value}</p>
-                                </div>
-                            ))}
-                        </div>
-                        <button className="w-full mt-4 bg-blue-500 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm">
-                            Apply New Leave
-                        </button>
-                    </Card>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <Card className="lg:col-span-1 p-6 flex flex-col items-center justify-center text-center">
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Attendance</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">10:03 AM, 04 Feb 2026</p>
-                        <div className="relative w-32 h-32 mb-6">
-                            <div className="absolute inset-0 rounded-full border-4 border-gray-100 dark:border-gray-700"></div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-2xl font-bold text-gray-400 dark:text-gray-500">N/A</span>
-                            </div>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 mb-2 border border-gray-200 dark:border-gray-700">
-                            Production: N/A
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-6">
-                            <Clock size={14} />
-                            Clock In Time N/A
-                        </div>
-                        <div className="flex w-full gap-3">
-                            <button className="flex-1 bg-blue-500 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-600 flex items-center justify-center gap-2">
-                                <LogIn size={16} /> Clock In
-                            </button>
-                            <button className="flex-1 bg-blue-500 text-white py-2 rounded-md text-sm font-medium hover:bg-blue-600 flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
-                                <LogOut size={16} /> Clock Out
-                            </button>
-                        </div>
-                    </Card>
-
-                    <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <StatCard icon={Trophy} value="0" label="Appreciations" colorClass="bg-blue-100 dark:bg-blue-900/30" textClass="text-blue-600 dark:text-blue-400" />
-                        <StatCard icon={AlertTriangle} value="0" label="Warnings" colorClass="bg-indigo-100 dark:bg-indigo-900/30" textClass="text-indigo-600 dark:text-indigo-400" />
-                        <StatCard icon={DollarSign} value="0" label="Expenses" colorClass="bg-purple-100 dark:bg-purple-900/30" textClass="text-purple-600 dark:text-purple-400" />
-                        <StatCard icon={Scale} value="0" label="Complaints" colorClass="bg-pink-100 dark:bg-pink-900/30" textClass="text-pink-600 dark:text-pink-400" />
-
-                        <Card className="sm:col-span-2 lg:col-span-4 p-5">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Working Hour Details</h3>
-                                <button className="text-xs border border-gray-200 dark:border-[#333333] rounded px-2 py-1 flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                    <CalendarDays size={14} /> Today
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <ProgressBar label="Total office time" value="-" color="bg-black dark:bg-white" iconColor="bg-black dark:bg-white" />
-                                <ProgressBar label="Total worked time" value="-" color="bg-emerald-500" iconColor="bg-emerald-500" />
-                                <ProgressBar label="Total Late time" value="-" color="bg-red-500" iconColor="bg-red-500" />
-                            </div>
-                        </Card>
+        <div className="w-full mx-auto py-2 px-2 sm:px-6">
+            <header className="mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">My Dashboard</h1>
+                        <p className="mt-2 text-sm sm:text-base text-neutral-500">
+                            Your personal overview and statistics.
+                        </p>
                     </div>
                 </div>
+            </header>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-                    <Card className="p-5">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Assigned Survey</h3>
-                        </div>
-                        <div className="border border-gray-200 dark:border-[#333333] rounded-lg p-4 flex items-start justify-between">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <InfoCard title="Profile">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-4 pb-4 border-b border-[#E5E7EB] dark:border-[#2F2F2F]">
+                            <Avatar name={employee?.user?.name || 'Employee'} size="lg" />
                             <div>
-                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Employee Preferences for Remote Work</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">04-02-2026</p>
+                                <h2 className="font-semibold text-[#1a1a1a] dark:text-white">{employee?.user?.name || 'Employee'}</h2>
+                                <p className="text-xs text-neutral-500">{employee?.post?.name || 'No Post'}</p>
                             </div>
-                            <button className="h-8 w-8 flex items-center justify-center rounded bg-blue-50 text-blue-500 dark:bg-blue-500/20 hover:bg-blue-100 dark:hover:bg-blue-500/30 transition-colors">
-                                <Play size={18} fill="currentColor" />
-                            </button>
                         </div>
-                    </Card>
+                        <InfoItem label="Phone Number" value={employee?.user?.phone || '-'} />
+                        <InfoItem label="Email" value={employee?.user?.email || '-'} />
+                        <InfoItem label="Address" value={employee?.user?.address || '-'} />
+                        <div className="pt-2 border-t border-[#E5E7EB] dark:border-[#2F2F2F]">
+                            <InfoItem
+                                label="Joining Date"
+                                value={employee?.createdAt ? new Date(employee.createdAt).toLocaleDateString() : '-'}
+                            />
+                        </div>
+                    </div>
+                </InfoCard>
 
-                    <Card className="p-5">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Increment/Promotion</h3>
-                            <button className="text-xs border border-gray-200 dark:border-[#333333] rounded px-2 py-1 flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
-                                Select Year... <CalendarDays size={12} />
-                            </button>
-                        </div>
-                        <div className="border border-gray-200 dark:border-[#333333] rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-2 h-2 rounded-full border border-red-500 bg-white dark:bg-transparent"></div>
-                                <span className="text-xs font-medium text-gray-900 dark:text-white">14-01-2026 Decrement/Demotion</span>
+                <InfoCard title="Attendance Summary">
+                    <div className="grid grid-cols-2 gap-4">
+                        <InfoItem label="Total" value={attendanceStats.total} colorClass="text-purple-600 dark:text-purple-400" />
+                        <InfoItem label="Present" value={attendanceStats.present} colorClass="text-emerald-600 dark:text-emerald-400" />
+                        <InfoItem label="Leaves" value={attendanceStats.leaves} colorClass="text-red-600 dark:text-red-400" />
+                        <InfoItem label="Half Day" value={attendanceStats.halfDay} colorClass="text-blue-600 dark:text-blue-400" />
+                        <InfoItem label="Late" value={attendanceStats.late} colorClass="text-orange-600 dark:text-orange-400" />
+                        <InfoItem label="Overtime" value={attendanceStats.overtime} colorClass="text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                </InfoCard>
+
+                <InfoCard title="Leave Summary">
+                    <div className="grid grid-cols-2 gap-4">
+                        <InfoItem label="Total Leaves" value={leaveStats.total} />
+                        <InfoItem label="Approved" value={leaveStats.approved} colorClass="text-emerald-600 dark:text-emerald-400" />
+                        <InfoItem label="Rejected" value={leaveStats.rejected} colorClass="text-red-600 dark:text-red-400" />
+                        <InfoItem label="Pending" value={leaveStats.pending} colorClass="text-orange-600 dark:text-orange-400" />
+                        <InfoItem label="Paid Leaves" value={leaveStats.paid} />
+                        <InfoItem label="Unpaid Leaves" value={leaveStats.unpaid} />
+                    </div>
+                    <ActionButton icon={Plus} onClick={() => setLeaveFormOpen(true)} className="w-full mt-4">
+                        Apply New Leave
+                    </ActionButton>
+                </InfoCard>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <InfoCard title="Today's Attendance">
+                    <div className="flex flex-col items-center py-4">
+                        <p className="text-xs text-neutral-500 mb-2">
+                            {currentTime.toLocaleTimeString()}, {currentTime.toLocaleDateString()}
+                        </p>
+                        <div className="relative w-24 h-24 mb-4">
+                            <div className="absolute inset-0 rounded-full border-4 border-[#E5E7EB] dark:border-[#2F2F2F]"></div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-xl font-bold text-neutral-400">
+                                    {todayAtt?.status === AttendanceStatus.PRESENT ? '✓' : 'N/A'}
+                                </span>
                             </div>
-                            <div className="pl-4 border-l border-gray-200 dark:border-gray-700 ml-1">
-                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Department Head</h4>
-                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    <span>Legal Advisor</span>
-                                    <ArrowRight size={12} className="text-red-500" />
-                                    <span>Customer Relationship Manager</span>
+                        </div>
+                        <div className="text-xs text-neutral-500 mb-4 flex items-center gap-1">
+                            <Clock size={14} />
+                            Clock In: {todayAtt?.checkIn ? new Date(todayAtt.checkIn).toLocaleTimeString() : 'N/A'}
+                        </div>
+                        <div className="flex w-full gap-3">
+                            <ActionButton icon={Timer} onClick={handleClockIn} className="flex-1" disabled={!!todayAtt}>
+                                Clock In
+                            </ActionButton>
+                            <ActionButton icon={TimerOff} onClick={handleClockOut} className="flex-1" disabled={!todayAtt || !!todayAtt.checkOut}>
+                                Clock Out
+                            </ActionButton>
+                        </div>
+                    </div>
+                </InfoCard>
+
+                <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <StatCard
+                        icon={Trophy}
+                        value="0"
+                        label="Appreciations"
+                        colorClass="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                    />
+                    <StatCard
+                        icon={AlertTriangle}
+                        value="0"
+                        label="Warnings"
+                        colorClass="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
+                    />
+                    <StatCard
+                        icon={DollarSign}
+                        value="0"
+                        label="Expenses"
+                        colorClass="bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+                    />
+                    <StatCard
+                        icon={Scale}
+                        value="0"
+                        label="Complaints"
+                        colorClass="bg-pink-50 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400"
+                    />
+
+                    <div className="col-span-2 sm:col-span-4">
+                        <InfoCard
+                            title="Working Hour Details"
+                            headerAction={
+                                <button className="text-xs border border-[#E5E7EB] dark:border-[#2F2F2F] rounded px-2 py-1 flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-[#252525] text-neutral-500">
+                                    <CalendarDays size={14} /> Today
+                                </button>
+                            }
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-[#1a1a1a] dark:bg-white"></span>
+                                        <span className="text-xs text-neutral-500">Total office time</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-[#1a1a1a] dark:text-white ml-4">-</p>
+                                    <div className="h-1.5 w-full bg-[#E5E7EB] dark:bg-[#2F2F2F] rounded-full ml-4">
+                                        <div className="h-full bg-[#1a1a1a] dark:bg-white w-0 rounded-full"></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <span className="text-xs text-neutral-500">Total worked time</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-[#1a1a1a] dark:text-white ml-4">-</p>
+                                    <div className="h-1.5 w-full bg-[#E5E7EB] dark:bg-[#2F2F2F] rounded-full ml-4">
+                                        <div className="h-full bg-emerald-500 w-0 rounded-full"></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                        <span className="text-xs text-neutral-500">Total late time</span>
+                                    </div>
+                                    <p className="text-xl font-bold text-[#1a1a1a] dark:text-white ml-4">-</p>
+                                    <div className="h-1.5 w-full bg-[#E5E7EB] dark:bg-[#2F2F2F] rounded-full ml-4">
+                                        <div className="h-full bg-red-500 w-0 rounded-full"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </Card>
-                </div>
-
-                <div className="mt-2 mb-4 text-center">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">© 2026 HRMIFLY. All rights reserved.</p>
+                        </InfoCard>
+                    </div>
                 </div>
             </div>
-        </>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <InfoCard title="Assigned Survey">
+                    <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg p-4 flex items-start justify-between hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors cursor-pointer">
+                        <div>
+                            <p className="text-sm font-medium text-[#1a1a1a] dark:text-white mb-1">Employee Preferences for Remote Work</p>
+                            <p className="text-xs text-neutral-500">{currentTime.toLocaleDateString()}</p>
+                        </div>
+                        <button className="h-8 w-8 flex items-center justify-center rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
+                            <Play size={16} fill="currentColor" />
+                        </button>
+                    </div>
+                </InfoCard>
+
+                <InfoCard
+                    title="Increment/Promotion"
+                    headerAction={
+                        <button className="text-xs border border-[#E5E7EB] dark:border-[#2F2F2F] rounded px-2 py-1 flex items-center gap-1 hover:bg-gray-50 dark:hover:bg-[#252525] text-neutral-500">
+                            Select Year... <CalendarDays size={12} />
+                        </button>
+                    }
+                >
+                    <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-2 h-2 rounded-full border border-emerald-500 bg-white dark:bg-[#191919]"></div>
+                            <span className="text-xs font-medium text-[#1a1a1a] dark:text-white">
+                                {employee?.createdAt ? new Date(employee.createdAt).toLocaleDateString() : '-'} Joined
+                            </span>
+                        </div>
+                        <div className="pl-4 border-l border-[#E5E7EB] dark:border-[#2F2F2F] ml-1">
+                            <h4 className="text-sm font-semibold text-[#1a1a1a] dark:text-white">{employee?.post?.name || 'No Post'}</h4>
+                            <div className="flex items-center gap-2 text-xs text-neutral-500 mt-1">
+                                <span>Current Position</span>
+                            </div>
+                        </div>
+                    </div>
+                </InfoCard>
+            </div>
+
+            <LeaveFormModal
+                isOpen={leaveFormOpen}
+                onClose={() => setLeaveFormOpen(false)}
+                onSubmit={async (formData) => {
+                    if (!org || !employee) return;
+                    await leaveService.createLeave(org._id, {
+                        employee: employee._id,
+                        type: formData.type,
+                        startDate: formData.startDate,
+                        endDate: formData.endDate,
+                        reason: formData.reason,
+                        status: formData.status || LeaveStatus.PENDING
+                    });
+                    fetchData();
+                }}
+                leaveTypes={leaveTypes}
+                leaves={leaves}
+                currentEmployeeId={employee?._id}
+                title="Apply for Leave"
+                submitLabel="Submit Leave Request"
+            />
+        </div>
     );
 }
