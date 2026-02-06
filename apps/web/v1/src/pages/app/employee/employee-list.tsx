@@ -18,7 +18,7 @@ import { useOrgStore } from '../../../stores/org';
 import type { Employee, Role, Post, Department } from '../../../types/org';
 import Avatar from '../../../components/ui/avatar';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
-import EmployeeStatus from '../../../constants/org';
+import { EmployeeStatus } from '../../../constants/org';
 import { Modal } from '../../../components/ui/modal';
 
 const StatusBadge = ({ status }: { status: string }) => {

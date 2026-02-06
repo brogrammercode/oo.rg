@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { AppRoutes } from '../../constants/routes';
 import { useAuthStore } from '../../stores/auth';
+import { MenuItemDropdown } from '../permissions/menu-item-dropdown';
+import { PermissionsModal } from '../permissions/permissions-modal';
 
 interface NavItem {
     icon: React.ElementType;
@@ -37,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
         label: 'Dashboards',
         subItems: [
             { icon: Building2, label: 'Manager Dashboard', to: AppRoutes.DASHBOARD_MANAGER },
-            { icon: UserCircle, label: 'Self Dashboard', to: AppRoutes.DASHBOARD_SELF },
+            { icon: UserCircle, label: 'My Dashboard', to: AppRoutes.DASHBOARD_SELF },
         ]
     },
     {
@@ -79,6 +81,7 @@ const NAV_ITEMS: NavItem[] = [
 const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => {
     const location = useLocation();
     const [isOpen, setIsOpen] = useState(false);
+    const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
     const isActive = item.to ? location.pathname === item.to : false;
     const isChildActive = item.subItems?.some(sub => sub.to && location.pathname.startsWith(sub.to));
@@ -107,39 +110,57 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
 
     const content = (
         <>
-            <div className="flex items-center">
-                <item.icon size={level === 0 ? 18 : 16} className={`mr-3 ${isActive ? 'text-blue-500' : 'text-neutral-500 group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-200'}`} />
-                {item.label}
+            <div className="flex items-center flex-1 min-w-0">
+                <item.icon size={level === 0 ? 18 : 16} className={`mr-3 flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-neutral-500 group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-200'}`} />
+                <span className="truncate">{item.label}</span>
             </div>
-            {hasSubmenu && (
-                <ChevronRight
-                    size={14}
-                    className={`text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
-                />
-            )}
+            <div className="flex items-center gap-1 flex-shrink-0">
+                {level > 0 && item.to && (
+                    <MenuItemDropdown
+                        onDetailsClick={() => console.log('Details:', item.label)}
+                        onPermissionsClick={() => setPermissionsModalOpen(true)}
+                    />
+                )}
+                {hasSubmenu && (
+                    <ChevronRight
+                        size={14}
+                        className={`text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                    />
+                )}
+            </div>
         </>
     );
 
     return (
-        <div className="mb-0.5">
-            {item.to && !hasSubmenu ? (
-                <Link to={item.to} className={baseClasses}>
-                    {content}
-                </Link>
-            ) : (
-                <button onClick={handleClick} className={baseClasses}>
-                    {content}
-                </button>
-            )}
+        <>
+            <div className="mb-0.5">
+                {item.to && !hasSubmenu ? (
+                    <Link to={item.to} className={baseClasses}>
+                        {content}
+                    </Link>
+                ) : (
+                    <button onClick={handleClick} className={baseClasses} type="button">
+                        {content}
+                    </button>
+                )}
 
-            {hasSubmenu && isOpen && (
-                <div className="animate-in slide-in-from-left-2 duration-200">
-                    {item.subItems!.map((subItem, index) => (
-                        <SidebarItem key={index} item={subItem} level={level + 1} />
-                    ))}
-                </div>
+                {hasSubmenu && isOpen && (
+                    <div className="animate-in slide-in-from-left-2 duration-200">
+                        {item.subItems!.map((subItem, index) => (
+                            <SidebarItem key={index} item={subItem} level={level + 1} />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {level > 0 && item.to && (
+                <PermissionsModal
+                    isOpen={permissionsModalOpen}
+                    onClose={() => setPermissionsModalOpen(false)}
+                    menuItemLabel={item.label}
+                />
             )}
-        </div>
+        </>
     );
 };
 

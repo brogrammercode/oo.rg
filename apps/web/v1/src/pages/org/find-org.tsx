@@ -4,7 +4,7 @@ import { AppRoutes } from "../../constants/routes";
 import { useState, useEffect } from "react";
 import Avatar from "../../components/ui/avatar";
 import orgService from "../../services/org/org.service";
-import EmployeeStatus from "../../constants/org";
+import { EmployeeStatus } from "../../constants/org";
 import type { Employee, Org } from "../../types/org";
 import { useOrgStore } from "../../stores/org";
 

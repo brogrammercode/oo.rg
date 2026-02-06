@@ -25,7 +25,6 @@ import type { Leave, LeaveType } from '../../../types/leave';
 
 export default function SelfDashboard() {
     const { org, employee } = useOrgStore();
-    // const navigate = useNavigate();
     const [attendance, setAttendance] = useState<Attendance[]>([]);
     const [leaves, setLeaves] = useState<Leave[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);

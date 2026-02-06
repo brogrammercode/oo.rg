@@ -1,4 +1,4 @@
-import EmployeeStatus from "../../constants/org";
+import { EmployeeStatus } from "../../constants/org";
 import apiClient from "../../core/api-client";
 
 class OrgService {
@@ -74,7 +74,7 @@ class OrgService {
         return await apiClient.post(`/org/${orgId}/role`, data);
     }
 
-    async updateRole(roleId: string, data: { name: string, description?: string, color?: string }) {
+    async updateRole(roleId: string, data: { name: string, description?: string, color?: string, permissions?: string[] }) {
         return await apiClient.put(`/org/role/${roleId}`, data);
     }
 
