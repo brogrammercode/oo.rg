@@ -6,6 +6,7 @@ import {
     Clock,
     Trash2,
     Pencil,
+    CalendarDays
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import attendanceService from '../../../services/attendance/attendance.service';
@@ -18,6 +19,8 @@ import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
 import { Modal } from '../../../components/ui/modal';
 import { AttendanceStatus } from '../../../constants/attendance';
 import { getLocalDateString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
+import { CalendarView } from '../../../components/ui/calendar-view';
+import { AttendanceStatusBadge } from './attendance-components';
 
 const StatusBadge = ({ status }: { status: string }) => {
     let styles = "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
@@ -60,12 +63,19 @@ export default function AttendanceList() {
         checkOut: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
+    const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+    const [selectedEmployeeAttendance, setSelectedEmployeeAttendance] = useState<Attendance[]>([]);
 
     const fetchAttendance = async () => {
         if (!org) return;
         try {
             const res = await attendanceService.getAllAttendance(org._id);
-            setAttendance(res.data.data.attendance);
+            const sortedAttendance = res.data.data.attendance.sort((a: Attendance, b: Attendance) => {
+                const dateA = a.date ? new Date(a.date).getTime() : 0;
+                const dateB = b.date ? new Date(b.date).getTime() : 0;
+                return dateB - dateA;
+            });
+            setAttendance(sortedAttendance);
         } catch (error) {
             console.error(error);
         } finally {
@@ -170,6 +180,16 @@ export default function AttendanceList() {
         return `${hours}h ${minutes}m`;
     };
 
+    const openCalendarView = async (employeeId: string) => {
+        try {
+            const res = await attendanceService.getAttendance(employeeId);
+            setSelectedEmployeeAttendance(Array.isArray(res.data.data.attendance) ? res.data.data.attendance : [res.data.data.attendance]);
+            setCalendarModalOpen(true);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[50vh] w-full items-center justify-center">
@@ -266,6 +286,7 @@ export default function AttendanceList() {
                                         }
                                         align="right"
                                     >
+                                        <DropdownItem icon={CalendarDays} label="View Calendar" onClick={() => openCalendarView(att.employee?._id || '')} />
                                         <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(att)} />
                                         <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(att)} />
                                     </Dropdown>
@@ -427,6 +448,28 @@ export default function AttendanceList() {
                     </div>
                 </div>
             </Modal>
+
+            <CalendarView
+                isOpen={calendarModalOpen}
+                onClose={() => setCalendarModalOpen(false)}
+                title="Employee Attendance Calendar"
+                data={selectedEmployeeAttendance}
+                dateField="date"
+                renderDay={(day) => {
+                    if (!day.data) return null;
+                    return (
+                        <div className="flex flex-col gap-1">
+                            <AttendanceStatusBadge status={day.data.status || 'PRESENT'} />
+                            {day.data.checkIn && (
+                                <span className="text-[10px] text-neutral-500">
+                                    {new Date(day.data.checkIn).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                    {day.data.checkOut && ` - ${new Date(day.data.checkOut).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
+                                </span>
+                            )}
+                        </div>
+                    );
+                }}
+            />
         </div>
     );
 }

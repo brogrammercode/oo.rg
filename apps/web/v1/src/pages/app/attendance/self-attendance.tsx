@@ -1,7 +1,8 @@
 import {
     Loader2,
     Calendar,
-    Clock
+    Clock,
+    CalendarDays
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import attendanceService from '../../../services/attendance/attendance.service';
@@ -10,11 +11,13 @@ import type { Attendance } from '../../../types/attendance';
 import { AttendanceStatus } from '../../../constants/attendance';
 import { ClockButton, AttendanceStatusBadge, formatDuration } from './attendance-components';
 import { getLocalDateString, getLocalDateTimeString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
+import { CalendarView } from '../../../components/ui/calendar-view';
 
 export default function SelfAttendance() {
     const { org, employee } = useOrgStore();
     const [attendance, setAttendance] = useState<Attendance[]>([]);
     const [loading, setLoading] = useState(true);
+    const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
     const fetchMyAttendance = async () => {
         if (!employee) return;
@@ -89,18 +92,29 @@ export default function SelfAttendance() {
 
     return (
         <div className="w-full mx-auto py-2 px-2 sm:px-6">
-            <header className="mb-8 flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">My Attendance</h1>
-                    <p className="mt-2 text-neutral-500 max-w-2xl">
-                        Track your attendance records and work hours.
-                    </p>
+            <header className="mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">My Attendance</h1>
+                        <p className="mt-2 text-sm sm:text-base text-neutral-500">
+                            Track your attendance records and work hours.
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCalendarModalOpen(true)}
+                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <CalendarDays size={16} />
+                            <span className="hidden sm:inline">Calendar</span>
+                        </button>
+                        <ClockButton
+                            todayAttendance={getTodayAttendance()}
+                            onClockIn={handleClockIn}
+                            onClockOut={handleClockOut}
+                        />
+                    </div>
                 </div>
-                <ClockButton
-                    todayAttendance={getTodayAttendance()}
-                    onClockIn={handleClockIn}
-                    onClockOut={handleClockOut}
-                />
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -141,14 +155,14 @@ export default function SelfAttendance() {
                 </div>
             </div>
 
-            <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
+            <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-x-auto bg-white dark:bg-[#191919] shadow-sm">
                 <table className="w-full text-left text-sm">
                     <thead>
                         <tr className="border-b border-[#E5E7EB] dark:border-[#2F2F2F] bg-gray-50/50 dark:bg-zinc-800/20">
                             <th className="py-3 px-4 font-medium text-neutral-500">Date</th>
                             <th className="py-3 px-4 font-medium text-neutral-500">Status</th>
-                            <th className="py-3 px-4 font-medium text-neutral-500">Check In</th>
-                            <th className="py-3 px-4 font-medium text-neutral-500">Check Out</th>
+                            <th className="py-3 px-4 font-medium text-neutral-500 hidden sm:table-cell">Check In</th>
+                            <th className="py-3 px-4 font-medium text-neutral-500 hidden sm:table-cell">Check Out</th>
                             <th className="py-3 px-4 font-medium text-neutral-500">Duration</th>
                         </tr>
                     </thead>
@@ -158,26 +172,26 @@ export default function SelfAttendance() {
                                 <td className="py-3 px-4">
                                     <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                                         <Calendar size={14} className="text-neutral-400" />
-                                        <span className="font-medium">{att.date ? new Date(att.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
+                                        <span className="font-medium text-xs sm:text-sm">{att.date ? new Date(att.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) : '-'}</span>
                                     </div>
                                 </td>
                                 <td className="py-3 px-4">
                                     <AttendanceStatusBadge status={att.status || 'PRESENT'} />
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 hidden sm:table-cell">
                                     <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                                         <Clock size={14} className="text-neutral-400" />
                                         <span>{att.checkIn ? new Date(att.checkIn).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                                     </div>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 hidden sm:table-cell">
                                     <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                                         <Clock size={14} className="text-neutral-400" />
                                         <span>{att.checkOut ? new Date(att.checkOut).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                                     </div>
                                 </td>
                                 <td className="py-3 px-4">
-                                    <span className="font-medium text-[#1a1a1a] dark:text-white">
+                                    <span className="font-medium text-[#1a1a1a] dark:text-white text-xs sm:text-sm">
                                         {att.duration ? formatDuration(att.duration) : '-'}
                                     </span>
                                 </td>
@@ -185,7 +199,7 @@ export default function SelfAttendance() {
                         ))}
                         {attendance.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="py-8 text-center text-neutral-500">
+                                <td colSpan={5} className="py-8 text-center text-neutral-500 text-sm">
                                     No attendance records found. Click "Clock In" to start!
                                 </td>
                             </tr>
@@ -193,6 +207,28 @@ export default function SelfAttendance() {
                     </tbody>
                 </table>
             </div>
+
+            <CalendarView
+                isOpen={calendarModalOpen}
+                onClose={() => setCalendarModalOpen(false)}
+                title="My Attendance Calendar"
+                data={attendance}
+                dateField="date"
+                renderDay={(day) => {
+                    if (!day.data) return null;
+                    return (
+                        <div className="flex flex-col gap-1">
+                            <AttendanceStatusBadge status={day.data.status || 'PRESENT'} />
+                            {day.data.checkIn && (
+                                <span className="text-[10px] text-neutral-500">
+                                    {new Date(day.data.checkIn).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                    {day.data.checkOut && ` - ${new Date(day.data.checkOut).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`}
+                                </span>
+                            )}
+                        </div>
+                    );
+                }}
+            />
         </div>
     );
 }

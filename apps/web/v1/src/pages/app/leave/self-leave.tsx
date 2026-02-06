@@ -2,7 +2,8 @@ import {
     Loader2,
     Calendar,
     FileText,
-    Plus
+    Plus,
+    CalendarDays
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import leaveService from '../../../services/leave/leave.service';
@@ -10,6 +11,7 @@ import { useOrgStore } from '../../../stores/org';
 import type { Leave, LeaveType } from '../../../types/leave';
 import { LeaveStatus } from '../../../constants/leave';
 import { LeaveFormModal, StatusBadge, getDuration, isPositiveStatus, calculateTotalRemainingLeaves } from './leave-components';
+import { CalendarView } from '../../../components/ui/calendar-view';
 
 export default function SelfLeave() {
     const { org, employee } = useOrgStore();
@@ -17,6 +19,7 @@ export default function SelfLeave() {
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [loading, setLoading] = useState(true);
     const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
     const fetchMyLeaves = async () => {
         if (!employee) return;
@@ -80,20 +83,32 @@ export default function SelfLeave() {
 
     return (
         <div className="w-full mx-auto py-2 px-2 sm:px-6">
-            <header className="mb-8 flex justify-between items-end">
-                <div>
-                    <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">My Leaves</h1>
-                    <p className="mt-2 text-neutral-500 max-w-2xl">
-                        View and track your leave requests and approvals.
-                    </p>
+            <header className="mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">My Leaves</h1>
+                        <p className="mt-2 text-sm sm:text-base text-neutral-500">
+                            View and track your leave requests and approvals.
+                        </p>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCalendarModalOpen(true)}
+                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <CalendarDays size={16} />
+                            <span className="hidden sm:inline">Calendar</span>
+                        </button>
+                        <button
+                            onClick={() => setCreateModalOpen(true)}
+                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <Plus size={16} />
+                            <span className="hidden sm:inline">Request Leave</span>
+                            <span className="sm:hidden">Request</span>
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => setCreateModalOpen(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus size={16} />
-                    Request Leave
-                </button>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -146,15 +161,15 @@ export default function SelfLeave() {
                 </div>
             </div>
 
-            <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
+            <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-x-auto bg-white dark:bg-[#191919] shadow-sm">
                 <table className="w-full text-left text-sm">
                     <thead>
                         <tr className="border-b border-[#E5E7EB] dark:border-[#2F2F2F] bg-gray-50/50 dark:bg-zinc-800/20">
                             <th className="py-3 px-4 font-medium text-neutral-500">Type</th>
-                            <th className="py-3 px-4 font-medium text-neutral-500">Start Date</th>
-                            <th className="py-3 px-4 font-medium text-neutral-500">End Date</th>
+                            <th className="py-3 px-4 font-medium text-neutral-500 hidden sm:table-cell">Start Date</th>
+                            <th className="py-3 px-4 font-medium text-neutral-500 hidden sm:table-cell">End Date</th>
                             <th className="py-3 px-4 font-medium text-neutral-500">Duration</th>
-                            <th className="py-3 px-4 font-medium text-neutral-500">Reason</th>
+                            <th className="py-3 px-4 font-medium text-neutral-500 hidden md:table-cell">Reason</th>
                             <th className="py-3 px-4 font-medium text-neutral-500">Status</th>
                         </tr>
                     </thead>
@@ -164,33 +179,33 @@ export default function SelfLeave() {
                                 <td className="py-3 px-4">
                                     <div className="flex items-center gap-2">
                                         <div
-                                            className="w-2 h-2 rounded-full"
+                                            className="w-2 h-2 rounded-full flex-shrink-0"
                                             style={{ backgroundColor: leave.type?.color || '#3b82f6' }}
                                         />
-                                        <span className="text-neutral-600 dark:text-neutral-300 font-medium">{leave.type?.name || '-'}</span>
+                                        <span className="text-neutral-600 dark:text-neutral-300 font-medium text-xs sm:text-sm">{leave.type?.name || '-'}</span>
                                         {leave.type?.isPaid && (
-                                            <span className="text-xs text-green-600 dark:text-green-400">(Paid)</span>
+                                            <span className="text-xs text-green-600 dark:text-green-400 hidden sm:inline">(Paid)</span>
                                         )}
                                     </div>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 hidden sm:table-cell">
                                     <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                                         <Calendar size={14} className="text-neutral-400" />
-                                        <span>{leave.startDate ? new Date(leave.startDate).toLocaleDateString() : '-'}</span>
+                                        <span className="text-xs sm:text-sm">{leave.startDate ? new Date(leave.startDate).toLocaleDateString() : '-'}</span>
+                                    </div>
+                                </td>
+                                <td className="py-3 px-4 hidden sm:table-cell">
+                                    <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
+                                        <Calendar size={14} className="text-neutral-400" />
+                                        <span className="text-xs sm:text-sm">{leave.endDate ? new Date(leave.endDate).toLocaleDateString() : '-'}</span>
                                     </div>
                                 </td>
                                 <td className="py-3 px-4">
-                                    <div className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
-                                        <Calendar size={14} className="text-neutral-400" />
-                                        <span>{leave.endDate ? new Date(leave.endDate).toLocaleDateString() : '-'}</span>
-                                    </div>
-                                </td>
-                                <td className="py-3 px-4">
-                                    <span className="text-neutral-600 dark:text-neutral-300 font-medium">
+                                    <span className="text-neutral-600 dark:text-neutral-300 font-medium text-xs sm:text-sm">
                                         {getDuration(leave.startDate, leave.endDate)}
                                     </span>
                                 </td>
-                                <td className="py-3 px-4">
+                                <td className="py-3 px-4 hidden md:table-cell">
                                     <span className="text-neutral-600 dark:text-neutral-300 text-sm">
                                         {leave.reason ? (leave.reason.length > 50 ? leave.reason.substring(0, 50) + '...' : leave.reason) : '-'}
                                     </span>
@@ -202,7 +217,7 @@ export default function SelfLeave() {
                         ))}
                         {leaves.length === 0 && (
                             <tr>
-                                <td colSpan={6} className="py-8 text-center text-neutral-500">
+                                <td colSpan={6} className="py-8 text-center text-neutral-500 text-sm">
                                     No leave requests found. Request your first leave!
                                 </td>
                             </tr>
@@ -222,6 +237,33 @@ export default function SelfLeave() {
                 submitLabel="Submit Request"
                 showEmployeeSelect={false}
                 showStatusSelect={false}
+            />
+
+            <CalendarView
+                isOpen={calendarModalOpen}
+                onClose={() => setCalendarModalOpen(false)}
+                title="My Leave Calendar"
+                data={leaves}
+                dateField="startDate"
+                renderDay={(day) => {
+                    const leave = leaves.find(l => {
+                        const start = l.startDate ? new Date(l.startDate) : null;
+                        const end = l.endDate ? new Date(l.endDate) : null;
+                        if (!start || !end) return false;
+                        return day.date >= start && day.date <= end;
+                    });
+
+                    if (!leave) return null;
+
+                    return (
+                        <div className="flex flex-col gap-1">
+                            <StatusBadge status={leave.status || 'PENDING'} />
+                            <div className="text-[10px] text-neutral-500 truncate">
+                                {leave.type?.name}
+                            </div>
+                        </div>
+                    );
+                }}
             />
         </div>
     );

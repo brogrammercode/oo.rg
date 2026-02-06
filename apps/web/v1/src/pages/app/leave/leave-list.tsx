@@ -6,7 +6,8 @@ import {
     FileText,
     Trash2,
     Pencil,
-    Tag
+    Tag,
+    CalendarDays
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import leaveService from '../../../services/leave/leave.service';
@@ -20,6 +21,7 @@ import { Modal } from '../../../components/ui/modal';
 import { LeaveStatus } from '../../../constants/leave';
 import { LeaveFormModal, StatusBadge, getDuration } from './leave-components';
 import { toLocalDateString } from '../../../utils/date';
+import { CalendarView } from '../../../components/ui/calendar-view';
 
 export default function LeaveList() {
     const { org } = useOrgStore();
@@ -59,12 +61,19 @@ export default function LeaveList() {
     });
 
     const [actionLoading, setActionLoading] = useState(false);
+    const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+    const [selectedEmployeeLeaves, setSelectedEmployeeLeaves] = useState<Leave[]>([]);
 
     const fetchLeaves = async () => {
         if (!org) return;
         try {
             const res = await leaveService.getAllLeaves(org._id);
-            setLeaves(res.data.data.leave);
+            const sortedLeaves = res.data.data.leave.sort((a: Leave, b: Leave) => {
+                const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+                const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+                return dateB - dateA;
+            });
+            setLeaves(sortedLeaves);
         } catch (error) {
             console.error(error);
         } finally {
@@ -229,6 +238,16 @@ export default function LeaveList() {
         setDeleteLeaveTypeModalOpen(true);
     };
 
+    const openCalendarView = async (employeeId: string) => {
+        try {
+            const res = await leaveService.getMyLeaves(employeeId);
+            setSelectedEmployeeLeaves(Array.isArray(res.data.data.leave) ? res.data.data.leave : [res.data.data.leave]);
+            setCalendarModalOpen(true);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[50vh] w-full items-center justify-center">
@@ -331,6 +350,7 @@ export default function LeaveList() {
                                         }
                                         align="right"
                                     >
+                                        <DropdownItem icon={CalendarDays} label="View Calendar" onClick={() => openCalendarView(leave.employee?._id || '')} />
                                         <DropdownItem icon={FileText} label="View Details" onClick={() => openViewModal(leave)} />
                                         <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(leave)} />
                                         <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(leave)} />
@@ -736,6 +756,33 @@ export default function LeaveList() {
                     </div>
                 </div>
             </Modal>
+
+            <CalendarView
+                isOpen={calendarModalOpen}
+                onClose={() => setCalendarModalOpen(false)}
+                title="Employee Leave Calendar"
+                data={selectedEmployeeLeaves}
+                dateField="startDate"
+                renderDay={(day) => {
+                    const leave = selectedEmployeeLeaves.find(l => {
+                        const start = l.startDate ? new Date(l.startDate) : null;
+                        const end = l.endDate ? new Date(l.endDate) : null;
+                        if (!start || !end) return false;
+                        return day.date >= start && day.date <= end;
+                    });
+
+                    if (!leave) return null;
+
+                    return (
+                        <div className="flex flex-col gap-1">
+                            <StatusBadge status={leave.status || 'PENDING'} />
+                            <div className="text-[10px] text-neutral-500 truncate">
+                                {leave.type?.name}
+                            </div>
+                        </div>
+                    );
+                }}
+            />
         </div>
     );
 }

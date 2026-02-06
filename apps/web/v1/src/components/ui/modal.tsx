@@ -7,11 +7,17 @@ interface ModalProps {
     onClose: () => void;
     children: React.ReactNode;
     title?: string;
-    width?: string;
+    size?: 'small' | 'medium' | 'large';
 }
 
-export function Modal({ isOpen, onClose, children, title, width = 'max-w-md' }: ModalProps) {
+export function Modal({ isOpen, onClose, children, title, size = 'medium' }: ModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
+
+    const sizeClasses = {
+        small: 'max-w-sm',
+        medium: 'max-w-md',
+        large: 'max-w-5xl'
+    };
 
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
@@ -37,7 +43,7 @@ export function Modal({ isOpen, onClose, children, title, width = 'max-w-md' }: 
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div
                 ref={modalRef}
-                className={`bg-white dark:bg-[#191919] w-full ${width} rounded-xl shadow-2xl border border-neutral-100 dark:border-zinc-800 relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}
+                className={`bg-white dark:bg-[#191919] w-full ${sizeClasses[size]} rounded-xl shadow-2xl border border-neutral-100 dark:border-zinc-800 relative animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] dark:border-[#2F2F2F]">
