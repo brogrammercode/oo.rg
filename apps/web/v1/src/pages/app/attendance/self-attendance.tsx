@@ -9,6 +9,7 @@ import { useOrgStore } from '../../../stores/org';
 import type { Attendance } from '../../../types/attendance';
 import { AttendanceStatus } from '../../../constants/attendance';
 import { ClockButton, AttendanceStatusBadge, formatDuration } from './attendance-components';
+import { getLocalDateString, getLocalDateTimeString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
 
 export default function SelfAttendance() {
     const { org, employee } = useOrgStore();
@@ -33,20 +34,19 @@ export default function SelfAttendance() {
     }, [employee]);
 
     const getTodayAttendance = (): Attendance | null => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getLocalDateString();
         return attendance.find(att => {
-            const attDate = att.date ? new Date(att.date).toISOString().split('T')[0] : '';
+            const attDate = att.date ? toLocalDateString(att.date) : '';
             return attDate === today;
         }) || null;
     };
 
     const handleClockIn = async () => {
         if (!org || !employee) return;
-        const now = new Date();
         await attendanceService.createAttendance(org._id, employee._id, {
-            date: now.toISOString().split('T')[0],
+            date: getLocalDateString(),
             status: AttendanceStatus.PRESENT,
-            checkIn: now.toISOString().slice(0, 16),
+            checkIn: getLocalDateTimeString(),
             checkOut: ''
         });
         fetchMyAttendance();
@@ -55,12 +55,11 @@ export default function SelfAttendance() {
     const handleClockOut = async () => {
         const todayAtt = getTodayAttendance();
         if (!todayAtt) return;
-        const now = new Date();
         await attendanceService.updateAttendance(todayAtt._id, {
-            date: todayAtt.date ? new Date(todayAtt.date).toISOString().split('T')[0] : '',
+            date: todayAtt.date ? toLocalDateString(todayAtt.date) : '',
             status: todayAtt.status || AttendanceStatus.PRESENT,
-            checkIn: todayAtt.checkIn ? new Date(todayAtt.checkIn).toISOString().slice(0, 16) : '',
-            checkOut: now.toISOString().slice(0, 16)
+            checkIn: todayAtt.checkIn ? toLocalDateTimeString(todayAtt.checkIn) : '',
+            checkOut: getLocalDateTimeString()
         });
         fetchMyAttendance();
     };

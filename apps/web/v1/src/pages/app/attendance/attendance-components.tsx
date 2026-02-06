@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Modal } from '../../../components/ui/modal';
 import { AttendanceStatus } from '../../../constants/attendance';
 import type { Attendance } from '../../../types/attendance';
+import { getLocalDateString } from '../../../utils/date';
 
 interface AttendanceFormProps {
     isOpen: boolean;
@@ -32,7 +33,7 @@ export function AttendanceFormModal({
     initialData
 }: AttendanceFormProps) {
     const [formData, setFormData] = useState({
-        date: initialData?.date || new Date().toISOString().split('T')[0],
+        date: initialData?.date || getLocalDateString(),
         status: initialData?.status || AttendanceStatus.PRESENT,
         checkIn: initialData?.checkIn || '',
         checkOut: initialData?.checkOut || ''
@@ -64,7 +65,7 @@ export function AttendanceFormModal({
                         type="date"
                         className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
                         value={formData.date}
-                        max={new Date().toISOString().split('T')[0]}
+                        max={getLocalDateString()}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     />
                 </div>

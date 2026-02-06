@@ -17,6 +17,7 @@ import Avatar from '../../../components/ui/avatar';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
 import { Modal } from '../../../components/ui/modal';
 import { AttendanceStatus } from '../../../constants/attendance';
+import { getLocalDateString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
 
 const StatusBadge = ({ status }: { status: string }) => {
     let styles = "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
@@ -53,7 +54,7 @@ export default function AttendanceList() {
     const [selectedAttendance, setSelectedAttendance] = useState<Attendance | null>(null);
     const [formData, setFormData] = useState({
         employeeId: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalDateString(),
         status: 'PRESENT',
         checkIn: '',
         checkOut: ''
@@ -100,7 +101,7 @@ export default function AttendanceList() {
             setCreateModalOpen(false);
             setFormData({
                 employeeId: '',
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalDateString(),
                 status: AttendanceStatus.PRESENT,
                 checkIn: '',
                 checkOut: ''
@@ -150,10 +151,10 @@ export default function AttendanceList() {
         setSelectedAttendance(att);
         setFormData({
             employeeId: att.employee?._id || '',
-            date: att.date ? new Date(att.date).toISOString().split('T')[0] : '',
+            date: att.date ? toLocalDateString(att.date) : '',
             status: att.status || 'PRESENT',
-            checkIn: att.checkIn ? new Date(att.checkIn).toISOString().slice(0, 16) : '',
-            checkOut: att.checkOut ? new Date(att.checkOut).toISOString().slice(0, 16) : ''
+            checkIn: att.checkIn ? toLocalDateTimeString(att.checkIn) : '',
+            checkOut: att.checkOut ? toLocalDateTimeString(att.checkOut) : ''
         });
         setEditModalOpen(true);
     };
@@ -190,7 +191,7 @@ export default function AttendanceList() {
                     onClick={() => {
                         setFormData({
                             employeeId: '',
-                            date: new Date().toISOString().split('T')[0],
+                            date: getLocalDateString(),
                             status: 'PRESENT',
                             checkIn: '',
                             checkOut: ''

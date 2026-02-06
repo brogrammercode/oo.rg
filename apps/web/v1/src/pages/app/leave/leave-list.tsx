@@ -19,6 +19,7 @@ import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
 import { Modal } from '../../../components/ui/modal';
 import { LeaveStatus } from '../../../constants/leave';
 import { LeaveFormModal, StatusBadge, getDuration } from './leave-components';
+import { toLocalDateString } from '../../../utils/date';
 
 export default function LeaveList() {
     const { org } = useOrgStore();
@@ -192,8 +193,8 @@ export default function LeaveList() {
         setSelectedLeave(leave);
         setEditFormData({
             type: leave.type?._id || '',
-            startDate: leave.startDate ? new Date(leave.startDate).toISOString().split('T')[0] : '',
-            endDate: leave.endDate ? new Date(leave.endDate).toISOString().split('T')[0] : '',
+            startDate: leave.startDate ? toLocalDateString(leave.startDate) : '',
+            endDate: leave.endDate ? toLocalDateString(leave.endDate) : '',
             reason: leave.reason || '',
             status: leave.status || 'PENDING'
         });

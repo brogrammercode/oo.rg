@@ -4,6 +4,7 @@ import { Modal } from '../../../components/ui/modal';
 import type { LeaveType, Leave } from '../../../types/leave';
 import type { Employee } from '../../../types/org';
 import { LeaveStatus } from '../../../constants/leave';
+import { getLocalDateString } from '../../../utils/date';
 
 interface LeaveFormProps {
     isOpen: boolean;
@@ -163,7 +164,7 @@ export function LeaveFormModal({
                             type="date"
                             className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
                             value={formData.startDate}
-                            min={new Date().toISOString().split('T')[0]}
+                            min={getLocalDateString()}
                             onChange={(e) => {
                                 setFormData({ ...formData, startDate: e.target.value, endDate: '' });
                             }}
@@ -175,7 +176,7 @@ export function LeaveFormModal({
                             type="date"
                             className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
                             value={formData.endDate}
-                            min={formData.startDate || new Date().toISOString().split('T')[0]}
+                            min={formData.startDate || getLocalDateString()}
                             max={remainingInfo ? getMaxEndDate(formData.startDate, remainingInfo) : undefined}
                             disabled={!formData.startDate}
                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
