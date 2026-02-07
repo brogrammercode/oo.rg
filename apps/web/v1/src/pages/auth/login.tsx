@@ -5,6 +5,8 @@ import authService from '../../services/auth/auth.service';
 import { useAuthStore } from '../../stores/auth';
 import { useNavigate } from 'react-router-dom';
 import { AppRoutes } from '../../constants/routes';
+import orgService from '../../services/org/org.service';
+import { useOrgStore } from '../../stores/org';
 
 const Navbar = () => (
     <nav className="absolute top-0 z-30 w-full px-6 py-6 md:px-12 flex justify-between items-center max-w-[1400px] mx-auto left-0 right-0">
@@ -76,16 +78,22 @@ const Login = () => {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { login: setAuth } = useAuthStore();
+    const { setEmployee, setOrg } = useOrgStore();
     const navigate = useNavigate();
 
     const handleLogin = async () => {
         setIsLoading(true);
         try {
             const res = await authService.login(email, password);
+            const employee = await orgService.getAnyEmployee(res.data.user._id);
             if (res.data) {
                 setAuth(res.data.user, res.data.token);
-                navigate(AppRoutes.APP);
             }
+            if (employee.data) {
+                setOrg(employee.data.data.employee.org);
+                setEmployee(employee.data.data.employee);
+            }
+            navigate(AppRoutes.APP);
         } catch (error) {
             console.error(error);
         } finally {

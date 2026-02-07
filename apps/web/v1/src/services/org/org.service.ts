@@ -16,6 +16,10 @@ class OrgService {
         return await apiClient.get(`/org/${orgId}/employee/my`);
     }
 
+    async getAnyEmployee(userId: string) {
+        return await apiClient.get(`/org/employee/user/${userId}`);
+    }
+
     async getAllEmployees(orgId: string) {
         return await apiClient.get(`/org/${orgId}/employee`);
     }

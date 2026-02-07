@@ -54,6 +54,30 @@ class OrgController {
         sendSuccess(res, { employee: employee }, "Employee retrieved successfully", HttpStatus.OK);
     });
 
+    getAnyEmployee = asyncHandler(async (req: Request, res: Response) => {
+        const employee = await Employee.findOne({
+            user: req.params.userId,
+            status: { $nin: [EmployeeStatus.REJECTED, EmployeeStatus.REQUESTED, EmployeeStatus.RESIGNED] }
+        })
+            .populate([
+                { path: "org", select: "name" },
+                { path: "user", select: "name email" },
+                { path: "roles", select: "name permissions" },
+                {
+                    path: "post",
+                    select: "name department logo",
+                    populate: {
+                        path: "department",
+                        select: "name description color"
+                    }
+                }
+            ]);
+
+        if (!employee) throw new BadRequestError("Employee not found");
+
+        sendSuccess(res, { employee }, "Employee retrieved successfully", HttpStatus.OK);
+    });
+
     getAllEmployees = asyncHandler(async (req: Request, res: Response) => {
         const employees = await Employee.find({ org: req.params.orgId })
             .populate("user", "name email")

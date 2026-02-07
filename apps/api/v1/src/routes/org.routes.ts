@@ -18,6 +18,7 @@ class OrgRoutes {
 
         this.router.get("/:orgId/employee/my", authenticate, this.orgController.getMyEmployee);
         this.router.get("/:orgId/employee", authenticate, this.orgController.getAllEmployees);
+        this.router.get("/employee/user/:userId", this.orgController.getAnyEmployee);
         this.router.post("/:orgId/employee", authenticate, this.orgController.createEmployee);
         this.router.post("/:orgId/employee/request", authenticate, this.orgController.requestEmployee);
         this.router.put("/employee/:employeeId", authenticate, this.orgController.updateEmployee);
