@@ -24,6 +24,7 @@ import { LeaveStatus } from '../../../constants/leave';
 import { LeaveFormModal, StatusBadge, getDuration } from './leave-components';
 import { toLocalDateString } from '../../../utils/date';
 import { CalendarView } from '../../../components/ui/calendar-view';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
 
 export default function LeaveList() {
     const { org } = useOrgStore();
@@ -359,8 +360,12 @@ export default function LeaveList() {
                                     >
                                         <DropdownItem icon={CalendarDays} label="View Calendar" onClick={() => openCalendarView(leave.employee?._id || '')} />
                                         <DropdownItem icon={FileText} label="View Details" onClick={() => openViewModal(leave)} />
-                                        <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(leave)} />
-                                        <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(leave)} />
+                                        <PermissionGuard permission={Permissions.UPDATE_LEAVE}>
+                                            <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(leave)} />
+                                        </PermissionGuard>
+                                        <PermissionGuard permission={Permissions.DELETE_LEAVE}>
+                                            <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(leave)} />
+                                        </PermissionGuard>
                                     </Dropdown>
                                 </td>
                             </tr>

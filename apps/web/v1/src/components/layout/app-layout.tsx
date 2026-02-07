@@ -26,13 +26,13 @@ import { useAuthStore } from '../../stores/auth';
 import { MenuItemDropdown } from '../permissions/menu-item-dropdown';
 import { PermissionsModal } from '../permissions/permissions-modal';
 import { usePermission } from '../../hooks/usePermission';
-import { getPermissionsForMenuItem } from '../../utils/permissions';
 import { Permissions } from '../../constants/org';
 
 interface NavItem {
     icon: React.ElementType;
     label: string;
     to?: string;
+    permission?: string;
     subItems?: NavItem[];
 }
 
@@ -41,34 +41,34 @@ const NAV_ITEMS: NavItem[] = [
         icon: LayoutDashboard,
         label: 'Dashboards',
         subItems: [
-            { icon: Building2, label: 'Manager Dashboard', to: AppRoutes.DASHBOARD_MANAGER },
-            { icon: UserCircle, label: 'My Dashboard', to: AppRoutes.DASHBOARD_SELF },
+            { icon: Building2, label: 'Manager Dashboard', to: AppRoutes.DASHBOARD_MANAGER, permission: Permissions.READ_MANAGER_DASHBOARD },
+            { icon: UserCircle, label: 'My Dashboard', to: AppRoutes.DASHBOARD_SELF, permission: Permissions.READ_SELF_DASHBOARD },
         ]
     },
     {
         icon: Users,
         label: 'Employees',
         subItems: [
-            { icon: UserCircle, label: 'Employees', to: AppRoutes.EMPLOYEE_LIST },
-            { icon: ShieldCheck, label: 'Roles', to: AppRoutes.ROLE_LIST },
-            { icon: Building2, label: 'Departments', to: AppRoutes.DEPARTMENT_LIST },
+            { icon: UserCircle, label: 'Employees', to: AppRoutes.EMPLOYEE_LIST, permission: Permissions.READ_ALL_EMPLOYEE },
+            { icon: ShieldCheck, label: 'Roles', to: AppRoutes.ROLE_LIST, permission: Permissions.READ_ALL_ROLE },
+            { icon: Building2, label: 'Departments', to: AppRoutes.DEPARTMENT_LIST, permission: Permissions.READ_ALL_DEPARTMENT },
         ]
     },
     {
         icon: Plane,
         label: 'Leaves',
         subItems: [
-            { icon: Calendar, label: 'My Leaves', to: AppRoutes.LEAVE_MY },
-            { icon: FileText, label: 'Leaves', to: AppRoutes.LEAVE_LIST },
+            { icon: Calendar, label: 'My Leaves', to: AppRoutes.LEAVE_MY, permission: Permissions.READ_SELF_LEAVE },
+            { icon: FileText, label: 'Leaves', to: AppRoutes.LEAVE_LIST, permission: Permissions.READ_ALL_LEAVE },
         ]
     },
     {
         icon: Clock,
         label: 'Attendance',
         subItems: [
-            { icon: Calendar, label: 'My Attendance', to: AppRoutes.ATTENDANCE_MY },
-            { icon: Clock, label: 'Attendance', to: AppRoutes.ATTENDANCE_LIST },
-            { icon: BarChart3, label: 'Attendance Summary', to: AppRoutes.ATTENDANCE_SUMMARY },
+            { icon: Calendar, label: 'My Attendance', to: AppRoutes.ATTENDANCE_MY, permission: Permissions.READ_SELF_ATTENDANCE },
+            { icon: Clock, label: 'Attendance', to: AppRoutes.ATTENDANCE_LIST, permission: Permissions.READ_ALL_ATTENDANCE },
+            { icon: BarChart3, label: 'Attendance Summary', to: AppRoutes.ATTENDANCE_SUMMARY, permission: Permissions.READ_ATTENDANCE_SUMMARY },
         ]
     },
     {
@@ -83,7 +83,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => {
     const location = useLocation();
-    const { hasAnyPermission, hasPermission } = usePermission();
+    const { hasPermission } = usePermission();
     const [isOpen, setIsOpen] = useState(false);
     const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
@@ -96,8 +96,7 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
 
     const hasSubmenu = item.subItems && item.subItems.length > 0;
 
-    const requiredPermissions = getPermissionsForMenuItem(item.label);
-    const hasAccess = requiredPermissions.length === 0 || hasAnyPermission(requiredPermissions);
+    const hasAccess = item.permission ? hasPermission(item.permission) : true;
 
     if (!hasAccess && !hasSubmenu) {
         return null;
@@ -121,8 +120,7 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
 
     const visibleSubItems = hasSubmenu
         ? item.subItems!.filter(subItem => {
-            const subPermissions = getPermissionsForMenuItem(subItem.label);
-            return subPermissions.length === 0 || hasAnyPermission(subPermissions);
+            return subItem.permission ? hasPermission(subItem.permission) : true;
         })
         : [];
 

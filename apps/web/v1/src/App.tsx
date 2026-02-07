@@ -19,6 +19,8 @@ import AttendanceSummary from './pages/app/attendance/attendance-summary'
 import LeaveList from './pages/app/leave/leave-list'
 import SelfLeave from './pages/app/leave/self-leave'
 import orgService from './services/org/org.service'
+import { ProtectedRoute } from './components/guards/protected-route'
+import { Permissions } from './constants/org'
 
 function App() {
   const auth = useAuthStore();
@@ -73,20 +75,18 @@ function App() {
         }
       />
 
-      <Route path={AppRoutes.DASHBOARD_MANAGER} element={<AppLayout><ManagerDashboard /></AppLayout>} />
-      <Route path={AppRoutes.DASHBOARD_SELF} element={<AppLayout><SelfDashboard /></AppLayout>} />
-      <Route path={AppRoutes.EMPLOYEE_LIST} element={<AppLayout><EmployeeList /></AppLayout>} />
-      <Route path={AppRoutes.ROLE_LIST} element={<AppLayout><RoleList /></AppLayout>} />
-      <Route path={AppRoutes.DEPARTMENT_LIST} element={<AppLayout><DepartmentList /></AppLayout>} />
+      <Route path={AppRoutes.DASHBOARD_MANAGER} element={<ProtectedRoute permission={Permissions.READ_MANAGER_DASHBOARD}><AppLayout><ManagerDashboard /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.DASHBOARD_SELF} element={<ProtectedRoute permission={Permissions.READ_SELF_DASHBOARD}><AppLayout><SelfDashboard /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.EMPLOYEE_LIST} element={<ProtectedRoute permission={Permissions.READ_ALL_EMPLOYEE}><AppLayout><EmployeeList /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.ROLE_LIST} element={<ProtectedRoute permission={Permissions.READ_ALL_ROLE}><AppLayout><RoleList /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.DEPARTMENT_LIST} element={<ProtectedRoute permission={Permissions.READ_ALL_DEPARTMENT}><AppLayout><DepartmentList /></AppLayout></ProtectedRoute>} />
 
-      /// ATTENDANCE
-      <Route path={AppRoutes.ATTENDANCE_LIST} element={<AppLayout><AttendanceList /></AppLayout>} />
-      <Route path={AppRoutes.ATTENDANCE_MY} element={<AppLayout><SelfAttendance /></AppLayout>} />
-      <Route path={AppRoutes.ATTENDANCE_SUMMARY} element={<AppLayout><AttendanceSummary /></AppLayout>} />
+      <Route path={AppRoutes.ATTENDANCE_LIST} element={<ProtectedRoute permission={Permissions.READ_ALL_ATTENDANCE}><AppLayout><AttendanceList /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.ATTENDANCE_MY} element={<ProtectedRoute permission={Permissions.READ_SELF_ATTENDANCE}><AppLayout><SelfAttendance /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.ATTENDANCE_SUMMARY} element={<ProtectedRoute permission={Permissions.READ_ATTENDANCE_SUMMARY}><AppLayout><AttendanceSummary /></AppLayout></ProtectedRoute>} />
 
-      /// LEAVE
-      <Route path={AppRoutes.LEAVE_LIST} element={<AppLayout><LeaveList /></AppLayout>} />
-      <Route path={AppRoutes.LEAVE_MY} element={<AppLayout><SelfLeave /></AppLayout>} />
+      <Route path={AppRoutes.LEAVE_LIST} element={<ProtectedRoute permission={Permissions.READ_ALL_LEAVE}><AppLayout><LeaveList /></AppLayout></ProtectedRoute>} />
+      <Route path={AppRoutes.LEAVE_MY} element={<ProtectedRoute permission={Permissions.READ_SELF_LEAVE}><AppLayout><SelfLeave /></AppLayout></ProtectedRoute>} />
     </Routes>
   )
 }
