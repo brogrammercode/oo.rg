@@ -48,10 +48,13 @@ export function CalendarView({
         for (let day = 1; day <= daysInMonth; day++) {
             const currentDay = new Date(year, month, day);
             const dayData = data.find(item => {
+                if (!item || !item[dateField]) return false;
                 const itemDate = new Date(item[dateField]);
-                return itemDate.getFullYear() === year &&
+                return (
+                    itemDate.getFullYear() === year &&
                     itemDate.getMonth() === month &&
-                    itemDate.getDate() === day;
+                    itemDate.getDate() === day
+                );
             });
 
             days.push({
@@ -128,13 +131,13 @@ export function CalendarView({
                         <div
                             key={index}
                             className={`min-h-[80px] p-2 border rounded-lg ${day.isCurrentMonth
-                                    ? 'bg-white dark:bg-[#191919] border-[#E5E7EB] dark:border-[#2F2F2F]'
-                                    : 'bg-gray-50 dark:bg-[#0F0F0F] border-gray-200 dark:border-[#1F1F1F]'
+                                ? 'bg-white dark:bg-[#191919] border-[#E5E7EB] dark:border-[#2F2F2F]'
+                                : 'bg-gray-50 dark:bg-[#0F0F0F] border-gray-200 dark:border-[#1F1F1F]'
                                 }`}
                         >
                             <div className={`text-xs mb-1 ${day.isCurrentMonth
-                                    ? 'text-[#1a1a1a] dark:text-white font-medium'
-                                    : 'text-neutral-400'
+                                ? 'text-[#1a1a1a] dark:text-white font-medium'
+                                : 'text-neutral-400'
                                 }`}>
                                 {day.date.getDate()}
                             </div>

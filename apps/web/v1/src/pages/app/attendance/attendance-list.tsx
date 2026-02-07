@@ -6,13 +6,14 @@ import {
     Clock,
     Trash2,
     Pencil,
-    CalendarDays
+    CalendarDays,
+    Timer
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import attendanceService from '../../../services/attendance/attendance.service';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
-import type { Attendance } from '../../../types/attendance';
+import type { Attendance, ShiftType, BreakType, Break } from '../../../types/attendance';
 import type { Employee } from '../../../types/org';
 import Avatar from '../../../components/ui/avatar';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
@@ -20,9 +21,12 @@ import { Modal } from '../../../components/ui/modal';
 import { AttendanceStatus } from '../../../constants/attendance';
 import { getLocalDateString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
 import { CalendarView } from '../../../components/ui/calendar-view';
-import { AttendanceStatusBadge } from './attendance-components';
+import { AttendanceStatusBadge } from './components/attendance-components';
 import { PermissionGuard } from '../../../components/guards/permission-guard';
 import { Permissions } from '../../../constants/org';
+import { ShiftTypeModal, BreakTypeModal } from './components/attendance-config';
+import { BreakModal } from './components/break-modal';
+import { ShiftSelector } from './components/shift-selector';
 
 const StatusBadge = ({ status }: { status: string }) => {
     let styles = "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
@@ -36,8 +40,12 @@ const StatusBadge = ({ status }: { status: string }) => {
         styles = "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
     } else if (status === 'LEAVE') {
         styles = "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400";
+    } else if (status === 'BREAK') {
+        styles = "bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400";
     } else if (status === 'OVERTIME') {
         styles = "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400";
+    } else if (status === 'REQUESTED') {
+        styles = "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400";
     }
     return (
         <span className={`px-2 py-0.5 rounded text-[11px] font-medium border border-transparent ${styles}`}>
@@ -62,11 +70,18 @@ export default function AttendanceList() {
         date: getLocalDateString(),
         status: 'PRESENT',
         checkIn: '',
-        checkOut: ''
+        checkOut: '',
+        shiftType: '',
+        breaks: [] as Break[]
     });
     const [actionLoading, setActionLoading] = useState(false);
     const [calendarModalOpen, setCalendarModalOpen] = useState(false);
     const [selectedEmployeeAttendance, setSelectedEmployeeAttendance] = useState<Attendance[]>([]);
+    const [shiftTypeModalOpen, setShiftTypeModalOpen] = useState(false);
+    const [breakTypeModalOpen, setBreakTypeModalOpen] = useState(false);
+    const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([]);
+    const [breakTypes, setBreakTypes] = useState<BreakType[]>([]);
+    const [addBreakModalOpen, setAddBreakModalOpen] = useState(false);
 
     const fetchAttendance = async () => {
         if (!org) return;
@@ -95,20 +110,44 @@ export default function AttendanceList() {
         }
     };
 
+    const fetchShiftTypes = async () => {
+        if (!org) return;
+        try {
+            const res = await attendanceService.getAllShiftTypes(org._id);
+            setShiftTypes(res.data.data.shiftTypes);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchBreakTypes = async () => {
+        if (!org) return;
+        try {
+            const res = await attendanceService.getAllBreakTypes(org._id);
+            setBreakTypes(res.data.data.breakTypes);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     useEffect(() => {
         fetchAttendance();
         fetchEmployees();
+        fetchShiftTypes();
+        fetchBreakTypes();
     }, [org]);
 
     const handleCreateAttendance = async () => {
         if (!org) return;
         setActionLoading(true);
         try {
-            await attendanceService.createAttendance(org._id, formData.employeeId, {
+            await attendanceService.createAttendance(org._id, {
+                employee: formData.employeeId,
                 date: formData.date,
                 status: formData.status,
                 checkIn: formData.checkIn,
-                checkOut: formData.checkOut
+                checkOut: formData.checkOut,
+                shiftType: formData.shiftType || undefined
             });
             setCreateModalOpen(false);
             setFormData({
@@ -116,7 +155,9 @@ export default function AttendanceList() {
                 date: getLocalDateString(),
                 status: AttendanceStatus.PRESENT,
                 checkIn: '',
-                checkOut: ''
+                checkOut: '',
+                shiftType: '',
+                breaks: []
             });
             fetchAttendance();
         } catch (error) {
@@ -134,7 +175,8 @@ export default function AttendanceList() {
                 date: formData.date,
                 status: formData.status,
                 checkIn: formData.checkIn,
-                checkOut: formData.checkOut
+                checkOut: formData.checkOut,
+                shiftType: formData.shiftType || undefined
             });
             setEditModalOpen(false);
             fetchAttendance();
@@ -166,7 +208,9 @@ export default function AttendanceList() {
             date: att.date ? toLocalDateString(att.date) : '',
             status: att.status || 'PRESENT',
             checkIn: att.checkIn ? toLocalDateTimeString(att.checkIn) : '',
-            checkOut: att.checkOut ? toLocalDateTimeString(att.checkOut) : ''
+            checkOut: att.checkOut ? toLocalDateTimeString(att.checkOut) : '',
+            shiftType: att.shiftType?._id || '',
+            breaks: att.breaks || []
         });
         setEditModalOpen(true);
     };
@@ -184,7 +228,7 @@ export default function AttendanceList() {
 
     const openCalendarView = async (employeeId: string) => {
         try {
-            const res = await attendanceService.getAttendance(employeeId);
+            const res = await attendanceService.getMyAttendance(employeeId);
             setSelectedEmployeeAttendance(Array.isArray(res.data.data.attendance) ? res.data.data.attendance : [res.data.data.attendance]);
             setCalendarModalOpen(true);
         } catch (error) {
@@ -202,31 +246,49 @@ export default function AttendanceList() {
 
     return (
         <div className="w-full mx-auto py-2 px-2 sm:px-6">
-            <header className="mb-8 flex justify-between items-end">
+            <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-[#1a1a1a] dark:text-white tracking-tight">Attendance</h1>
                     <p className="mt-2 text-neutral-500 max-w-2xl">
                         Track and manage employee attendance records.
                     </p>
                 </div>
-                <PermissionGuard permission={Permissions.CREATE_ALL_ATTENDANCE}>
+                <div className="flex flex-wrap gap-2">
                     <button
-                        onClick={() => {
-                            setFormData({
-                                employeeId: '',
-                                date: getLocalDateString(),
-                                status: 'PRESENT',
-                                checkIn: '',
-                                checkOut: ''
-                            });
-                            setCreateModalOpen(true);
-                        }}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                        onClick={() => setShiftTypeModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
                     >
-                        <Plus size={16} />
-                        Add Attendance
+                        <Clock size={16} />
+                        Shifts
                     </button>
-                </PermissionGuard>
+                    <button
+                        onClick={() => setBreakTypeModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        <Timer size={16} />
+                        Break Types
+                    </button>
+                    <PermissionGuard permission={Permissions.CREATE_ALL_ATTENDANCE}>
+                        <button
+                            onClick={() => {
+                                setFormData({
+                                    employeeId: '',
+                                    date: getLocalDateString(),
+                                    status: 'PRESENT',
+                                    checkIn: '',
+                                    checkOut: '',
+                                    shiftType: '',
+                                    breaks: []
+                                });
+                                setCreateModalOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <Plus size={16} />
+                            Add Attendance
+                        </button>
+                    </PermissionGuard>
+                </div>
             </header>
 
             <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
@@ -351,29 +413,40 @@ export default function AttendanceList() {
                             <option value="OVERTIME">Overtime</option>
                         </select>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check In</label>
-                        <input
-                            type="datetime-local"
-                            className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
-                            value={formData.checkIn}
-                            onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check Out</label>
-                        <input
-                            type="datetime-local"
-                            className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
-                            value={formData.checkOut}
-                            onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
-                        />
+
+                    <ShiftSelector
+                        value={formData.shiftType}
+                        onChange={(value) => setFormData({ ...formData, shiftType: value })}
+                        shiftTypes={shiftTypes}
+                        label="Shift Type"
+                        placeholder="Select shift (optional)"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check In</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
+                                value={formData.checkIn}
+                                onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check Out</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
+                                value={formData.checkOut}
+                                onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-end gap-3 mt-4">
-                        <button onClick={() => setCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 border border-[#E5E7EB] rounded-lg">Cancel</button>
-                        <button onClick={handleCreateAttendance} disabled={actionLoading || !formData.employeeId} className="px-4 py-2 text-sm font-medium text-white bg-[#1a1a1a] hover:bg-black rounded-lg disabled:opacity-70 flex items-center gap-2">
+                        <button onClick={() => setCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:hover:text-white border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg whitespace-nowrap">Cancel</button>
+                        <button onClick={handleCreateAttendance} disabled={actionLoading || !formData.employeeId} className="px-4 py-2 text-sm font-medium text-white bg-[#1a1a1a] hover:bg-black rounded-lg disabled:opacity-70 flex items-center gap-2 whitespace-nowrap">
                             {actionLoading && <Loader2 size={16} className="animate-spin" />}
-                            Add Attendance
+                            Create
                         </button>
                     </div>
                 </div>
@@ -414,29 +487,74 @@ export default function AttendanceList() {
                             <option value="OVERTIME">Overtime</option>
                         </select>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check In</label>
-                        <input
-                            type="datetime-local"
-                            className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
-                            value={formData.checkIn}
-                            onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
-                        />
+
+                    <ShiftSelector
+                        value={formData.shiftType}
+                        onChange={(value) => setFormData({ ...formData, shiftType: value })}
+                        shiftTypes={shiftTypes}
+                        label="Shift Type"
+                        placeholder="Select shift (optional)"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check In</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
+                                value={formData.checkIn}
+                                onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check Out</label>
+                            <input
+                                type="datetime-local"
+                                className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
+                                value={formData.checkOut}
+                                onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">Check Out</label>
-                        <input
-                            type="datetime-local"
-                            className="w-full px-3 py-2 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/5 dark:focus:ring-white/10"
-                            value={formData.checkOut}
-                            onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
-                        />
-                    </div>
+
+                    {formData.breaks && formData.breaks.length > 0 && (
+                        <div>
+                            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Breaks</label>
+                            <div className="flex flex-col gap-2">
+                                {formData.breaks.map((brk, index) => (
+                                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg">
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-[#1a1a1a] dark:text-white">{brk.type?.name || 'Break'}</p>
+                                            <p className="text-xs text-neutral-500">
+                                                {brk.start && new Date(brk.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {brk.end && ` - ${new Date(brk.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => setFormData({ ...formData, breaks: formData.breaks.filter((_, i) => i !== index) })}
+                                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                        >
+                                            <Trash2 size={14} className="text-red-600 dark:text-red-400" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => setAddBreakModalOpen(true)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-[#1a1a1a] dark:text-white bg-gray-100 dark:bg-[#202020] hover:bg-gray-200 dark:hover:bg-[#252525] border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg transition-colors w-full sm:w-auto"
+                    >
+                        <Plus size={16} />
+                        Add Break
+                    </button>
+
                     <div className="flex justify-end gap-3 mt-4">
-                        <button onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 border border-[#E5E7EB] rounded-lg">Cancel</button>
-                        <button onClick={handleUpdateAttendance} disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-[#1a1a1a] hover:bg-black rounded-lg disabled:opacity-70 flex items-center gap-2">
+                        <button onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:hover:text-white border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg whitespace-nowrap">Cancel</button>
+                        <button onClick={handleUpdateAttendance} disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-[#1a1a1a] hover:bg-black rounded-lg disabled:opacity-70 flex items-center gap-2 whitespace-nowrap">
                             {actionLoading && <Loader2 size={16} className="animate-spin" />}
-                            Save Changes
+                            Update
                         </button>
                     </div>
                 </div>
@@ -448,10 +566,10 @@ export default function AttendanceList() {
                         Are you sure you want to delete the attendance record for <strong>{selectedAttendance?.employee?.user?.name}</strong> on <strong>{selectedAttendance?.date ? new Date(selectedAttendance.date).toLocaleDateString() : ''}</strong>? This action cannot be undone.
                     </p>
                     <div className="flex justify-end gap-3 mt-4">
-                        <button onClick={() => setDeleteModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 border border-[#E5E7EB] rounded-lg">Cancel</button>
-                        <button onClick={handleDeleteAttendance} disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-70 flex items-center gap-2">
+                        <button onClick={() => setDeleteModalOpen(false)} className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:hover:text-white border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg whitespace-nowrap">Cancel</button>
+                        <button onClick={handleDeleteAttendance} disabled={actionLoading} className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-70 flex items-center gap-2 whitespace-nowrap">
                             {actionLoading && <Loader2 size={16} className="animate-spin" />}
-                            Delete Attendance
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -477,6 +595,35 @@ export default function AttendanceList() {
                         </div>
                     );
                 }}
+            />
+
+            <ShiftTypeModal
+                isOpen={shiftTypeModalOpen}
+                onClose={() => setShiftTypeModalOpen(false)}
+                onRefresh={fetchAttendance}
+            />
+
+            <BreakTypeModal
+                isOpen={breakTypeModalOpen}
+                onClose={() => setBreakTypeModalOpen(false)}
+                onRefresh={fetchAttendance}
+            />
+
+            <BreakModal
+                isOpen={addBreakModalOpen}
+                onClose={() => setAddBreakModalOpen(false)}
+                onSubmit={async (data) => {
+                    const newBreak: Break = {
+                        _id: `temp_${Date.now()}`,
+                        type: breakTypes.find(bt => bt._id === data.type),
+                        start: new Date(data.start),
+                        status: 'PENDING'
+                    };
+                    setFormData({ ...formData, breaks: [...formData.breaks, newBreak] });
+                    setAddBreakModalOpen(false);
+                }}
+                breakTypes={breakTypes}
+                initialData={{ start: formData.checkIn || toLocalDateTimeString(new Date()) }}
             />
         </div>
     );

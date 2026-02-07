@@ -67,7 +67,8 @@ export default function SelfDashboard() {
     const handleClockIn = async () => {
         if (!org || !employee) return;
         try {
-            await attendanceService.createAttendance(org._id, employee._id, {
+            await attendanceService.createAttendance(org._id, {
+                employee: employee._id,
                 date: getLocalDateString(),
                 status: AttendanceStatus.PRESENT,
                 checkIn: getLocalDateTimeString(),

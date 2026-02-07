@@ -1,9 +1,9 @@
 import { Loader2, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { Modal } from '../../../components/ui/modal';
-import { AttendanceStatus } from '../../../constants/attendance';
-import type { Attendance } from '../../../types/attendance';
-import { getLocalDateString } from '../../../utils/date';
+import { Modal } from '../../../../components/ui/modal';
+import { AttendanceStatus } from '../../../../constants/attendance';
+import type { Attendance } from '../../../../types/attendance';
+import { getLocalDateString } from '../../../../utils/date';
 
 interface AttendanceFormProps {
     isOpen: boolean;
@@ -199,8 +199,12 @@ export function AttendanceStatusBadge({ status }: StatusBadgeProps) {
         styles = "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
     } else if (status === 'LEAVE') {
         styles = "bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400";
+    } else if (status === 'BREAK') {
+        styles = "bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-400";
     } else if (status === 'OVERTIME') {
         styles = "bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400";
+    } else if (status === 'REQUESTED') {
+        styles = "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400";
     }
     return (
         <span className={`px-2 py-0.5 rounded text-[11px] font-medium border border-transparent ${styles}`}>

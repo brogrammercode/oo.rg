@@ -10,13 +10,13 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import attendanceService from '../../../services/attendance/attendance.service';
-import orgService from '../../../services/org/org.service';
-import { useOrgStore } from '../../../stores/org';
-import type { Attendance } from '../../../types/attendance';
-import type { Employee } from '../../../types/org';
-import Avatar from '../../../components/ui/avatar';
-import { AttendanceStatus } from '../../../constants/attendance';
+import attendanceService from '../../../../services/attendance/attendance.service';
+import orgService from '../../../../services/org/org.service';
+import { useOrgStore } from '../../../../stores/org';
+import type { Attendance } from '../../../../types/attendance';
+import type { Employee } from '../../../../types/org';
+import Avatar from '../../../../components/ui/avatar';
+import { AttendanceStatus } from '../../../../constants/attendance';
 
 const StatusIcon = ({ status }: { status: string }) => {
     switch (status) {
