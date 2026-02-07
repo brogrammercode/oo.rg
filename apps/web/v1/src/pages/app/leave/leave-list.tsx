@@ -13,6 +13,9 @@ import { useEffect, useState } from 'react';
 import leaveService from '../../../services/leave/leave.service';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
+import { usePermission } from '../../../hooks/usePermission';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 import type { Leave, LeaveType } from '../../../types/leave';
 import type { Employee } from '../../../types/org';
 import Avatar from '../../../components/ui/avatar';
@@ -25,6 +28,7 @@ import { CalendarView } from '../../../components/ui/calendar-view';
 
 export default function LeaveList() {
     const { org } = useOrgStore();
+    const { hasPermission } = usePermission();
     const [leaves, setLeaves] = useState<Leave[]>([]);
     const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);

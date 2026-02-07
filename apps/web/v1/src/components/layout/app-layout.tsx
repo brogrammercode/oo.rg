@@ -25,6 +25,8 @@ import { AppRoutes } from '../../constants/routes';
 import { useAuthStore } from '../../stores/auth';
 import { MenuItemDropdown } from '../permissions/menu-item-dropdown';
 import { PermissionsModal } from '../permissions/permissions-modal';
+import { usePermission } from '../../hooks/usePermission';
+import { getPermissionsForMenuItem } from '../../utils/permissions';
 
 interface NavItem {
     icon: React.ElementType;
@@ -80,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => {
     const location = useLocation();
+    const { hasAnyPermission } = usePermission();
     const [isOpen, setIsOpen] = useState(false);
     const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
@@ -91,6 +94,13 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
     }, [isChildActive]);
 
     const hasSubmenu = item.subItems && item.subItems.length > 0;
+
+    const requiredPermissions = getPermissionsForMenuItem(item.label);
+    const hasAccess = requiredPermissions.length === 0 || hasAnyPermission(requiredPermissions);
+
+    if (!hasAccess && !hasSubmenu) {
+        return null;
+    }
 
     const baseClasses = `
         w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 group
@@ -107,6 +117,17 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
             setIsOpen(!isOpen);
         }
     };
+
+    const visibleSubItems = hasSubmenu
+        ? item.subItems!.filter(subItem => {
+            const subPermissions = getPermissionsForMenuItem(subItem.label);
+            return subPermissions.length === 0 || hasAnyPermission(subPermissions);
+        })
+        : [];
+
+    if (hasSubmenu && visibleSubItems.length === 0) {
+        return null;
+    }
 
     const content = (
         <>
@@ -146,7 +167,7 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
 
                 {hasSubmenu && isOpen && (
                     <div className="animate-in slide-in-from-left-2 duration-200">
-                        {item.subItems!.map((subItem, index) => (
+                        {visibleSubItems.map((subItem, index) => (
                             <SidebarItem key={index} item={subItem} level={level + 1} />
                         ))}
                     </div>

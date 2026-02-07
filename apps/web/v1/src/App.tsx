@@ -1,4 +1,5 @@
 import { Route, Routes, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import Login from './pages/auth/login'
 import FindOrg from './pages/org/find-org'
 import CreateOrg from './pages/org/create-org'
@@ -17,12 +18,39 @@ import SelfAttendance from './pages/app/attendance/self-attendance'
 import AttendanceSummary from './pages/app/attendance/attendance-summary'
 import LeaveList from './pages/app/leave/leave-list'
 import SelfLeave from './pages/app/leave/self-leave'
+import orgService from './services/org/org.service'
 
 function App() {
   const auth = useAuthStore();
   const org = useOrgStore();
   const authenticated = auth.isAuthenticated;
   const employee = org.employee;
+
+  useEffect(() => {
+    const refreshData = async () => {
+      if (!authenticated) return;
+
+      try {
+        if (org.org?._id) {
+          const orgRes = await orgService.getMyEmployee(org.org._id);
+          if (orgRes.data?.data?.org) {
+            org.setOrg(orgRes.data.data.org);
+          }
+        }
+
+        if (org.org?._id && org.employee?._id) {
+          const empRes = await orgService.getMyEmployee(org.org._id);
+          if (empRes.data?.data?.employee) {
+            org.setEmployee(empRes.data.data.employee);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refresh data:', error);
+      }
+    };
+
+    refreshData();
+  }, [authenticated]);
 
   const getRootElement = () => {
     if (!authenticated) return <Login />;

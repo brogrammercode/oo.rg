@@ -10,6 +10,9 @@ import {
 import { useEffect, useState } from 'react';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
+import { usePermission } from '../../../hooks/usePermission';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 import type { Role, Employee } from '../../../types/org';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
 import { Modal } from '../../../components/ui/modal';
@@ -17,6 +20,7 @@ import Avatar from '../../../components/ui/avatar';
 
 export default function RoleList() {
     const { org } = useOrgStore();
+    const { hasPermission } = usePermission();
     const [roles, setRoles] = useState<Role[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -143,16 +147,18 @@ export default function RoleList() {
                         Define roles and permissions for your organization members.
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setFormData({ name: '', description: '', color: '#3b82f6' });
-                        setCreateModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus size={16} />
-                    New Role
-                </button>
+                <PermissionGuard permission={Permissions.CREATE_ROLE}>
+                    <button
+                        onClick={() => {
+                            setFormData({ name: '', description: '', color: '#3b82f6' });
+                            setCreateModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        <Plus size={16} />
+                        New Role
+                    </button>
+                </PermissionGuard>
             </header>
 
             <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
@@ -218,8 +224,8 @@ export default function RoleList() {
                                             }
                                             align="right"
                                         >
-                                            <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(role)} />
-                                            <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(role)} />
+                                            {hasPermission(Permissions.UPDATE_ROLE) && <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(role)} />}
+                                            {hasPermission(Permissions.DELETE_ROLE) && <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(role)} />}
                                         </Dropdown>
                                     </td>
                                 </tr>
@@ -341,7 +347,7 @@ export default function RoleList() {
                 </div>
             </Modal>
 
-            <Modal isOpen={viewEmployeesModalOpen} onClose={() => setViewEmployeesModalOpen(false)} title={`${selectedRole?.name} - Employees`} width="max-w-2xl">
+            <Modal isOpen={viewEmployeesModalOpen} onClose={() => setViewEmployeesModalOpen(false)} title={`${selectedRole?.name} - Employees`}>
                 <div className="flex flex-col gap-4">
                     <p className="text-sm text-neutral-500">
                         {getEmployeesByRole(selectedRole?._id || '').length} employee(s) with this role

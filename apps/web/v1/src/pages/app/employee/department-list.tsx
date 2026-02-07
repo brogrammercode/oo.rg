@@ -13,6 +13,9 @@ import {
 import { useEffect, useState } from 'react';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
+import { usePermission } from '../../../hooks/usePermission';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 import type { Department, Post, Employee } from '../../../types/org';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
 import { Modal } from '../../../components/ui/modal';
@@ -20,6 +23,7 @@ import Avatar from '../../../components/ui/avatar';
 
 export default function DepartmentList() {
     const { org } = useOrgStore();
+    const { hasPermission } = usePermission();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -236,16 +240,18 @@ export default function DepartmentList() {
                         Organize your company structure by departments.
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setFormData({ name: '', description: '', color: '#3b82f6' });
-                        setCreateModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus size={16} />
-                    New Department
-                </button>
+                <PermissionGuard permission={Permissions.CREATE_DEPARTMENT}>
+                    <button
+                        onClick={() => {
+                            setFormData({ name: '', description: '', color: '#3b82f6' });
+                            setCreateModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        <Plus size={16} />
+                        New Department
+                    </button>
+                </PermissionGuard>
             </header>
 
             <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
@@ -317,8 +323,8 @@ export default function DepartmentList() {
                                             align="right"
                                         >
                                             <DropdownItem icon={Eye} label="View Posts" onClick={() => openViewPostsModal(dept)} />
-                                            <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(dept)} />
-                                            <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(dept)} />
+                                            {hasPermission(Permissions.UPDATE_DEPARTMENT) && <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(dept)} />}
+                                            {hasPermission(Permissions.DELETE_DEPARTMENT) && <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(dept)} />}
                                         </Dropdown>
                                     </td>
                                 </tr>
@@ -440,7 +446,7 @@ export default function DepartmentList() {
                 </div>
             </Modal>
 
-            <Modal isOpen={viewPostsModalOpen} onClose={() => setViewPostsModalOpen(false)} title={`Posts in ${selectedDept?.name}`} width="max-w-2xl">
+            <Modal isOpen={viewPostsModalOpen} onClose={() => setViewPostsModalOpen(false)} title={`Posts in ${selectedDept?.name}`} >
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-center">
                         <p className="text-sm text-neutral-500">Manage positions in this department</p>
@@ -600,7 +606,7 @@ export default function DepartmentList() {
                 </div>
             </Modal>
 
-            <Modal isOpen={viewEmployeesModalOpen} onClose={() => setViewEmployeesModalOpen(false)} title={`${selectedDept?.name} - Employees`} width="max-w-2xl">
+            <Modal isOpen={viewEmployeesModalOpen} onClose={() => setViewEmployeesModalOpen(false)} title={`${selectedDept?.name} - Employees`}>
                 <div className="flex flex-col gap-4">
                     <p className="text-sm text-neutral-500">
                         {getEmployeesByDepartment(selectedDept?._id || '').length} employee(s) in this department

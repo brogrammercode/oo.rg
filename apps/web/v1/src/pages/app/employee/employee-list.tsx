@@ -15,6 +15,9 @@ import {
 import { useEffect, useState } from 'react';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
+import { usePermission } from '../../../hooks/usePermission';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 import type { Employee, Role, Post, Department } from '../../../types/org';
 import Avatar from '../../../components/ui/avatar';
 import { Dropdown, DropdownItem } from '../../../components/ui/dropdown';
@@ -39,6 +42,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function EmployeeList() {
     const { org } = useOrgStore();
+    const { hasPermission } = usePermission();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [roles, setRoles] = useState<Role[]>([]);
@@ -253,16 +257,18 @@ export default function EmployeeList() {
                         Manage your organization's employees and their roles.
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setFormData({ name: '', email: '', password: '', role: '', post: '' });
-                        setCreateModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus size={16} />
-                    New Employee
-                </button>
+                <PermissionGuard permission={Permissions.CREATE_EMPLOYEE}>
+                    <button
+                        onClick={() => {
+                            setFormData({ name: '', email: '', password: '', role: '', post: '' });
+                            setCreateModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        <Plus size={16} />
+                        New Employee
+                    </button>
+                </PermissionGuard>
             </header>
 
             <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
@@ -326,10 +332,10 @@ export default function EmployeeList() {
                                         align="right"
                                     >
                                         <DropdownItem icon={User} label="View Profile" onClick={() => handleViewProfile(employee)} />
-                                        <DropdownItem icon={Shield} label="Edit Role" onClick={() => handleEditRole(employee)} />
-                                        <DropdownItem icon={Briefcase} label="Edit Post" onClick={() => handleEditPost(employee)} />
-                                        <DropdownItem icon={Trash2} label="Remove Member" danger onClick={() => handleRemoveMember(employee)} />
-                                        {employee.status == EmployeeStatus.REQUESTED && <DropdownItem icon={CheckCircle} label="Approve" onClick={() => handleApprove(employee)} />}
+                                        {hasPermission(Permissions.UPDATE_EMPLOYEE) && <DropdownItem icon={Shield} label="Edit Role" onClick={() => handleEditRole(employee)} />}
+                                        {hasPermission(Permissions.UPDATE_EMPLOYEE) && <DropdownItem icon={Briefcase} label="Edit Post" onClick={() => handleEditPost(employee)} />}
+                                        {hasPermission(Permissions.DELETE_EMPLOYEE) && <DropdownItem icon={Trash2} label="Remove Member" danger onClick={() => handleRemoveMember(employee)} />}
+                                        {employee.status == EmployeeStatus.REQUESTED && hasPermission(Permissions.UPDATE_EMPLOYEE) && <DropdownItem icon={CheckCircle} label="Approve" onClick={() => handleApprove(employee)} />}
                                     </Dropdown>
                                 </td>
                             </tr>

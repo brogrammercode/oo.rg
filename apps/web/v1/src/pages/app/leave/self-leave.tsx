@@ -8,6 +8,9 @@ import {
 import { useEffect, useState } from 'react';
 import leaveService from '../../../services/leave/leave.service';
 import { useOrgStore } from '../../../stores/org';
+import { usePermission } from '../../../hooks/usePermission';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 import type { Leave, LeaveType } from '../../../types/leave';
 import { LeaveStatus } from '../../../constants/leave';
 import { LeaveFormModal, StatusBadge, getDuration, isPositiveStatus, calculateTotalRemainingLeaves } from './leave-components';
@@ -99,14 +102,16 @@ export default function SelfLeave() {
                             <CalendarDays size={16} />
                             <span className="hidden sm:inline">Calendar</span>
                         </button>
-                        <button
-                            onClick={() => setCreateModalOpen(true)}
-                            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                            <Plus size={16} />
-                            <span className="hidden sm:inline">Request Leave</span>
-                            <span className="sm:hidden">Request</span>
-                        </button>
+                        <PermissionGuard permission={Permissions.CREATE_LEAVE}>
+                            <button
+                                onClick={() => setCreateModalOpen(true)}
+                                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                                <Plus size={16} />
+                                <span className="hidden sm:inline">Request Leave</span>
+                                <span className="sm:hidden">Request</span>
+                            </button>
+                        </PermissionGuard>
                     </div>
                 </div>
             </header>
