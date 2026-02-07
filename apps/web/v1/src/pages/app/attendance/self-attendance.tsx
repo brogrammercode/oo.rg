@@ -12,6 +12,8 @@ import { AttendanceStatus } from '../../../constants/attendance';
 import { ClockButton, AttendanceStatusBadge, formatDuration } from './attendance-components';
 import { getLocalDateString, getLocalDateTimeString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
 import { CalendarView } from '../../../components/ui/calendar-view';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 
 export default function SelfAttendance() {
     const { org, employee } = useOrgStore();
@@ -108,11 +110,13 @@ export default function SelfAttendance() {
                             <CalendarDays size={16} />
                             <span className="hidden sm:inline">Calendar</span>
                         </button>
-                        <ClockButton
-                            todayAttendance={getTodayAttendance()}
-                            onClockIn={handleClockIn}
-                            onClockOut={handleClockOut}
-                        />
+                        <PermissionGuard permission={Permissions.CREATE_ATTENDANCE}>
+                            <ClockButton
+                                todayAttendance={getTodayAttendance()}
+                                onClockIn={handleClockIn}
+                                onClockOut={handleClockOut}
+                            />
+                        </PermissionGuard>
                     </div>
                 </div>
             </header>

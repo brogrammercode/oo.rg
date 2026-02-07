@@ -27,6 +27,7 @@ import { MenuItemDropdown } from '../permissions/menu-item-dropdown';
 import { PermissionsModal } from '../permissions/permissions-modal';
 import { usePermission } from '../../hooks/usePermission';
 import { getPermissionsForMenuItem } from '../../utils/permissions';
+import { Permissions } from '../../constants/org';
 
 interface NavItem {
     icon: React.ElementType;
@@ -82,7 +83,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => {
     const location = useLocation();
-    const { hasAnyPermission } = usePermission();
+    const { hasAnyPermission, hasPermission } = usePermission();
     const [isOpen, setIsOpen] = useState(false);
     const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
 
@@ -136,7 +137,7 @@ const SidebarItem = ({ item, level = 0 }: { item: NavItem, level?: number }) => 
                 <span className="truncate">{item.label}</span>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-                {level > 0 && item.to && (
+                {hasPermission(Permissions.UPDATE_ROLE) && level > 0 && item.to && (
                     <MenuItemDropdown
                         onDetailsClick={() => console.log('Details:', item.label)}
                         onPermissionsClick={() => setPermissionsModalOpen(true)}

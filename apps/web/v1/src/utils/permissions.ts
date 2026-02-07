@@ -23,12 +23,18 @@ export const MENU_PERMISSIONS: Record<string, string[]> = {
     ],
     'My Leaves': [
         Permissions.READ_SELF_LEAVE,
-        Permissions.CREATE_LEAVE
+        Permissions.REQUEST_LEAVE,
+        Permissions.READ_LEAVE_TYPE,
     ],
     'Leaves': [
         Permissions.READ_ALL_LEAVE,
+        Permissions.CREATE_LEAVE,
         Permissions.UPDATE_LEAVE,
-        Permissions.DELETE_LEAVE
+        Permissions.DELETE_LEAVE,
+        Permissions.READ_LEAVE_TYPE,
+        Permissions.CREATE_LEAVE_TYPE,
+        Permissions.UPDATE_LEAVE_TYPE,
+        Permissions.DELETE_LEAVE_TYPE,
     ],
     'My Attendance': [
         Permissions.READ_SELF_ATTENDANCE,
@@ -36,6 +42,7 @@ export const MENU_PERMISSIONS: Record<string, string[]> = {
     ],
     'Attendance': [
         Permissions.READ_ALL_ATTENDANCE,
+        Permissions.CREATE_ALL_ATTENDANCE,
         Permissions.UPDATE_ATTENDANCE,
         Permissions.DELETE_ATTENDANCE
     ],

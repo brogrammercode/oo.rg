@@ -14,7 +14,6 @@ import leaveService from '../../../services/leave/leave.service';
 import orgService from '../../../services/org/org.service';
 import { useOrgStore } from '../../../stores/org';
 import { usePermission } from '../../../hooks/usePermission';
-import { PermissionGuard } from '../../../components/guards/permission-guard';
 import { Permissions } from '../../../constants/org';
 import type { Leave, LeaveType } from '../../../types/leave';
 import type { Employee } from '../../../types/org';
@@ -270,20 +269,24 @@ export default function LeaveList() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button
-                        onClick={() => setLeaveTypesModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                        <Tag size={16} />
-                        Leave Types
-                    </button>
-                    <button
-                        onClick={() => setCreateModalOpen(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                        <Plus size={16} />
-                        New Leave
-                    </button>
+                    {hasPermission(Permissions.READ_LEAVE_TYPE) && (
+                        <button
+                            onClick={() => setLeaveTypesModalOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-[#202020] border border-[#E5E7EB] dark:border-[#2F2F2F] hover:bg-gray-50 dark:hover:bg-[#252525] text-[#1a1a1a] dark:text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <Tag size={16} />
+                            Leave Types
+                        </button>
+                    )}
+                    {hasPermission(Permissions.CREATE_LEAVE) && (
+                        <button
+                            onClick={() => setCreateModalOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                            <Plus size={16} />
+                            New Leave
+                        </button>
+                    )}
                 </div>
             </header>
 
@@ -533,23 +536,25 @@ export default function LeaveList() {
             <Modal isOpen={leaveTypesModalOpen} onClose={() => setLeaveTypesModalOpen(false)} title="Leave Types">
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-end">
-                        <button
-                            onClick={() => {
-                                setLeaveTypeFormData({
-                                    name: '',
-                                    description: '',
-                                    color: '#3b82f6',
-                                    maxPerMonth: 0,
-                                    maxPerYear: 0,
-                                    isPaid: false
-                                });
-                                setCreateLeaveTypeModalOpen(true);
-                            }}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                            <Plus size={16} />
-                            Add Leave Type
-                        </button>
+                        {hasPermission(Permissions.CREATE_LEAVE_TYPE) && (
+                            <button
+                                onClick={() => {
+                                    setLeaveTypeFormData({
+                                        name: '',
+                                        description: '',
+                                        color: '#3b82f6',
+                                        maxPerMonth: 0,
+                                        maxPerYear: 0,
+                                        isPaid: false
+                                    });
+                                    setCreateLeaveTypeModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                            >
+                                <Plus size={16} />
+                                Add Leave Type
+                            </button>
+                        )}
                     </div>
                     <div className="space-y-2">
                         {leaveTypes.map((type) => (
@@ -576,18 +581,22 @@ export default function LeaveList() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={() => openEditLeaveTypeModal(type)}
-                                        className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded"
-                                    >
-                                        <Pencil size={14} className="text-neutral-600 dark:text-neutral-400" />
-                                    </button>
-                                    <button
-                                        onClick={() => openDeleteLeaveTypeModal(type)}
-                                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                    >
-                                        <Trash2 size={14} className="text-red-600 dark:text-red-400" />
-                                    </button>
+                                    {hasPermission(Permissions.UPDATE_LEAVE_TYPE) && (
+                                        <button
+                                            onClick={() => openEditLeaveTypeModal(type)}
+                                            className="p-1.5 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded"
+                                        >
+                                            <Pencil size={14} className="text-neutral-600 dark:text-neutral-400" />
+                                        </button>
+                                    )}
+                                    {hasPermission(Permissions.DELETE_LEAVE_TYPE) && (
+                                        <button
+                                            onClick={() => openDeleteLeaveTypeModal(type)}
+                                            className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                        >
+                                            <Trash2 size={14} className="text-red-600 dark:text-red-400" />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}

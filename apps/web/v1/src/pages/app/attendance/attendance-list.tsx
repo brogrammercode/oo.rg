@@ -21,6 +21,8 @@ import { AttendanceStatus } from '../../../constants/attendance';
 import { getLocalDateString, toLocalDateString, toLocalDateTimeString } from '../../../utils/date';
 import { CalendarView } from '../../../components/ui/calendar-view';
 import { AttendanceStatusBadge } from './attendance-components';
+import { PermissionGuard } from '../../../components/guards/permission-guard';
+import { Permissions } from '../../../constants/org';
 
 const StatusBadge = ({ status }: { status: string }) => {
     let styles = "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400";
@@ -207,22 +209,24 @@ export default function AttendanceList() {
                         Track and manage employee attendance records.
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setFormData({
-                            employeeId: '',
-                            date: getLocalDateString(),
-                            status: 'PRESENT',
-                            checkIn: '',
-                            checkOut: ''
-                        });
-                        setCreateModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                    <Plus size={16} />
-                    Add Attendance
-                </button>
+                <PermissionGuard permission={Permissions.CREATE_ALL_ATTENDANCE}>
+                    <button
+                        onClick={() => {
+                            setFormData({
+                                employeeId: '',
+                                date: getLocalDateString(),
+                                status: 'PRESENT',
+                                checkIn: '',
+                                checkOut: ''
+                            });
+                            setCreateModalOpen(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] hover:bg-black text-white text-sm font-medium rounded-lg transition-colors"
+                    >
+                        <Plus size={16} />
+                        Add Attendance
+                    </button>
+                </PermissionGuard>
             </header>
 
             <div className="border border-[#E5E7EB] dark:border-[#2F2F2F] rounded-lg overflow-hidden bg-white dark:bg-[#191919] shadow-sm">
@@ -287,8 +291,12 @@ export default function AttendanceList() {
                                         align="right"
                                     >
                                         <DropdownItem icon={CalendarDays} label="View Calendar" onClick={() => openCalendarView(att.employee?._id || '')} />
-                                        <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(att)} />
-                                        <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(att)} />
+                                        <PermissionGuard permission={Permissions.UPDATE_ATTENDANCE}>
+                                            <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(att)} />
+                                        </PermissionGuard>
+                                        <PermissionGuard permission={Permissions.DELETE_ATTENDANCE}>
+                                            <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(att)} />
+                                        </PermissionGuard>
                                     </Dropdown>
                                 </td>
                             </tr>

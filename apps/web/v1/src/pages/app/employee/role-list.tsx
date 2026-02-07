@@ -216,17 +216,19 @@ export default function RoleList() {
                                         )}
                                     </td>
                                     <td className="py-3 px-4 text-right">
-                                        <Dropdown
-                                            trigger={
-                                                <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                                                    <MoreHorizontal size={16} />
-                                                </button>
-                                            }
-                                            align="right"
-                                        >
-                                            {hasPermission(Permissions.UPDATE_ROLE) && <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(role)} />}
-                                            {hasPermission(Permissions.DELETE_ROLE) && <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(role)} />}
-                                        </Dropdown>
+                                        {(hasPermission(Permissions.UPDATE_ROLE) || hasPermission(Permissions.DELETE_ROLE)) &&
+                                            <Dropdown
+                                                trigger={
+                                                    <button className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                                                        <MoreHorizontal size={16} />
+                                                    </button>
+                                                }
+                                                align="right"
+                                            >
+                                                {hasPermission(Permissions.UPDATE_ROLE) && <DropdownItem icon={Pencil} label="Edit" onClick={() => openEditModal(role)} />}
+                                                {hasPermission(Permissions.DELETE_ROLE) && <DropdownItem icon={Trash2} label="Delete" danger onClick={() => openDeleteModal(role)} />}
+                                            </Dropdown>
+                                        }
                                     </td>
                                 </tr>
                             );
